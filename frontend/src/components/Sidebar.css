@@ -1,0 +1,54 @@
+/* Sidebar smooth animations and scrollbar */
+.sidebar-container {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Scrollbar visible when expanded */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Scrollbar hidden when collapsed */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  width: 0px;
+  display: none;
+}
+
+/* Smooth text transitions */
+.sidebar-text {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.sidebar-text-hidden {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.sidebar-text-visible {
+  opacity: 1;
+  transform: translateX(0);
+}

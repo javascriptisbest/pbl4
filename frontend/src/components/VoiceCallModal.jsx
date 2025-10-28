@@ -1,0 +1,264 @@
+import { useState, useRef, useEffect } from "react";
+import { Phone, PhoneOff, Mic, MicOff, Volume2 } from "lucide-react";
+import toast from "react-hot-toast";
+
+const VoiceCallModal = ({
+  isOpen,
+  isIncoming,
+  callerName,
+  offer,
+  voiceCallManager,
+  onClose,
+}) => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState("connecting");
+
+  const remoteAudioRef = useRef(null);
+  const callTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!voiceCallManager || !isOpen) return;
+
+    // Setup event handlers
+    voiceCallManager.onCallConnected = () => {
+      console.log("Call connected!");
+      setIsConnected(true);
+      setConnectionStatus("connected");
+      toast.success("Voice call connected");
+
+      // Start call timer
+      callTimerRef.current = setInterval(() => {
+        setCallDuration((prev) => prev + 1);
+      }, 1000);
+    };
+
+    voiceCallManager.onCallDisconnected = () => {
+      console.log("Call disconnected");
+      setIsConnected(false);
+      setConnectionStatus("disconnected");
+
+      // Clear timer
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
+
+      // Reset state
+      setCallDuration(0);
+      setIsMuted(false);
+
+      // Close modal after a delay
+      setTimeout(() => {
+        onClose();
+      }, 1000);
+    };
+
+    voiceCallManager.onRemoteStream = (stream) => {
+      console.log("Remote stream received", stream);
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = stream;
+
+        // Try to play audio, handle autoplay policy
+        remoteAudioRef.current
+          .play()
+          .then(() => {
+            console.log("Remote audio playing successfully");
+          })
+          .catch((error) => {
+            console.error("Error playing remote audio:", error);
+            // Retry with user interaction
+            toast.error("Click anywhere to enable audio");
+          });
+      } else {
+        console.error("Remote audio ref not available");
+      }
+    };
+
+    voiceCallManager.onCallRejected = () => {
+      toast.error("Call was rejected");
+      onClose();
+    };
+
+    voiceCallManager.onCallEnded = () => {
+      toast("Call ended");
+      onClose();
+    };
+
+    // Cleanup on unmount
+    return () => {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+      }
+    };
+  }, [voiceCallManager, isOpen, onClose]);
+
+  const handleAnswer = async () => {
+    try {
+      setConnectionStatus("connecting");
+      // Use the voiceCallManager to answer with the offer passed from parent
+      if (!voiceCallManager) throw new Error("Call manager not available");
+      if (!voiceCallManager.answerCall)
+        throw new Error("answerCall not implemented");
+      // `offer` should be provided as prop by parent
+      if (!voiceCallManager || !voiceCallManager.callerId) {
+        // still attempt using the stored offer prop
+      }
+      // Expect parent to pass `offer` prop (incoming SDP)
+      if (!voiceCallManager || !voiceCallManager.answerCall) {
+        throw new Error("Call cannot be answered right now");
+      }
+
+      // call answerCall with the offer passed in props
+      if (typeof voiceCallManager.answerCall === "function") {
+        await voiceCallManager.answerCall(offer);
+      }
+      toast.success("Answered call");
+    } catch (error) {
+      console.error("Error answering call:", error);
+      toast.error(error.message);
+    }
+  };
+
+  const handleReject = () => {
+    if (voiceCallManager) {
+      voiceCallManager.rejectCall();
+    }
+    onClose();
+  };
+
+  const handleEndCall = () => {
+    if (voiceCallManager) {
+      voiceCallManager.endCall();
+    }
+    onClose();
+  };
+
+  const toggleMute = () => {
+    if (voiceCallManager) {
+      const newMutedState = !isMuted;
+      voiceCallManager.setMuted(newMutedState);
+      setIsMuted(newMutedState);
+      toast(newMutedState ? "Microphone muted" : "Microphone unmuted");
+    }
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-base-100 rounded-xl p-6 w-80 shadow-xl">
+        {/* Remote audio element - hidden but functional */}
+        <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
+
+        {/* Call Header */}
+        <div className="text-center mb-6">
+          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+            <Phone className="w-10 h-10 text-primary-content" />
+          </div>
+
+          <h2 className="text-xl font-bold mb-2">
+            {isIncoming
+              ? `${callerName || "Unknown"} is calling...`
+              : `Calling ${callerName || "User"}...`}
+          </h2>
+
+          <div className="text-sm text-base-content/60">
+            {isConnected ? (
+              <span className="text-green-500">
+                Connected • {formatTime(callDuration)}
+              </span>
+            ) : (
+              <span className="text-yellow-500">
+                {connectionStatus === "connecting"
+                  ? "Connecting..."
+                  : "Waiting..."}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Call Controls */}
+        <div className="flex justify-center gap-4">
+          {isIncoming && !isConnected ? (
+            // Incoming call buttons
+            <>
+              <button
+                onClick={handleAnswer}
+                className="btn btn-circle btn-success btn-lg"
+                title="Answer call"
+              >
+                <Phone className="w-6 h-6" />
+              </button>
+              <button
+                onClick={handleReject}
+                className="btn btn-circle btn-error btn-lg"
+                title="Reject call"
+              >
+                <PhoneOff className="w-6 h-6" />
+              </button>
+            </>
+          ) : (
+            // Active call controls
+            <>
+              <button
+                onClick={toggleMute}
+                className={`btn btn-circle btn-lg ${
+                  isMuted ? "btn-warning" : "btn-ghost"
+                }`}
+                title={isMuted ? "Unmute" : "Mute"}
+              >
+                {isMuted ? (
+                  <MicOff className="w-6 h-6" />
+                ) : (
+                  <Mic className="w-6 h-6" />
+                )}
+              </button>
+
+              <button
+                onClick={handleEndCall}
+                className="btn btn-circle btn-error btn-lg"
+                title="End call"
+              >
+                <PhoneOff className="w-6 h-6" />
+              </button>
+
+              <button
+                className="btn btn-circle btn-ghost btn-lg"
+                title="Speaker"
+                disabled
+              >
+                <Volume2 className="w-6 h-6" />
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Connection Status */}
+        <div className="mt-4 text-center text-xs text-base-content/40">
+          {connectionStatus === "connecting" && (
+            <div className="flex items-center justify-center gap-2">
+              <div className="loading loading-spinner loading-xs"></div>
+              <span>Establishing connection...</span>
+            </div>
+          )}
+          {connectionStatus === "connected" && (
+            <span className="text-green-500">🟢 Voice call active</span>
+          )}
+          {connectionStatus === "disconnected" && (
+            <span className="text-red-500">Call ended</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VoiceCallModal;
