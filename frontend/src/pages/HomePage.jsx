@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useGroupStore } from "../store/useGroupStore";
 import UnifiedSidebar from "../components/UnifiedSidebar";
@@ -5,8 +6,31 @@ import NoChatSelected from "../components/NoChatSelected";
 import UnifiedChatContainer from "../components/UnifiedChatContainer";
 
 const HomePage = () => {
-  const { selectedUser } = useChatStore();
-  const { selectedGroup } = useGroupStore();
+  const { selectedUser, subscribeToMessages, unsubscribeFromMessages } =
+    useChatStore();
+  const {
+    selectedGroup,
+    subscribeToGroupMessages,
+    unsubscribeFromGroupMessages,
+  } = useGroupStore();
+
+  // Register socket listeners khi component mount
+  useEffect(() => {
+    // Subscribe to socket events for real-time updates
+    subscribeToMessages();
+    subscribeToGroupMessages();
+
+    // Cleanup: Unsubscribe khi component unmount
+    return () => {
+      unsubscribeFromMessages();
+      unsubscribeFromGroupMessages();
+    };
+  }, [
+    subscribeToMessages,
+    unsubscribeFromMessages,
+    subscribeToGroupMessages,
+    unsubscribeFromGroupMessages,
+  ]);
 
   return (
     <div className="h-screen bg-base-200">

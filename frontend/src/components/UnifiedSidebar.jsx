@@ -5,6 +5,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { Users, Plus, MessageSquare } from "lucide-react";
 import CreateGroupModal from "./CreateGroupModal";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
+import Avatar from "./Avatar";
 
 const UnifiedSidebar = () => {
   const [activeTab, setActiveTab] = useState("contacts"); // "contacts" or "groups"
@@ -139,14 +140,15 @@ const UnifiedSidebar = () => {
                   `}
                 >
                   <div className="relative flex-shrink-0">
-                    <img
-                      src={user.profilePic || "/avatar.png"}
+                    <Avatar
+                      src={user.profilePic}
                       alt={user.fullName}
-                      className="size-10 object-cover rounded-full"
+                      size="md"
+                      loading="lazy"
                     />
                     {onlineUsers.includes(user._id) && (
                       <span
-                        className="absolute bottom-0 right-0 size-3 bg-green-500 
+                        className="absolute bottom-0 right-0 size-3 bg-success 
                           rounded-full ring-2 ring-base-100"
                       />
                     )}
@@ -204,10 +206,11 @@ const UnifiedSidebar = () => {
                     <div className="relative flex-shrink-0">
                       <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
                         {group.avatar ? (
-                          <img
+                          <Avatar
                             src={group.avatar}
                             alt={group.name}
-                            className="w-full h-full object-cover"
+                            size="md"
+                            loading="lazy"
                           />
                         ) : (
                           <Users className="w-5 h-5 text-primary" />

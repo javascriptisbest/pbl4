@@ -5,9 +5,11 @@ import { Link } from "react-router-dom";
 
 import AuthImagePattern from "../components/AuthImagePattern";
 import toast from "react-hot-toast";
+import { defaultAvatars, getRandomAvatar } from "../lib/defaultAvatars";
 
 const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState(getRandomAvatar());
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -31,7 +33,10 @@ const SignUpPage = () => {
 
     const success = validateForm();
 
-    if (success === true) signup(formData);
+    if (success === true) {
+      // Gửi kèm avatar đã chọn
+      signup({ ...formData, profilePic: selectedAvatar.url });
+    }
   };
 
   return (
@@ -54,6 +59,33 @@ const SignUpPage = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Avatar Picker */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Choose Avatar</span>
+              </label>
+              <div className="flex flex-wrap gap-2 justify-center p-3 bg-base-200 rounded-lg">
+                {defaultAvatars.map((avatar) => (
+                  <button
+                    key={avatar.id}
+                    type="button"
+                    onClick={() => setSelectedAvatar(avatar)}
+                    className={`size-12 rounded-full transition-all hover:scale-110 ${
+                      selectedAvatar.id === avatar.id
+                        ? "ring-4 ring-primary scale-110"
+                        : "ring-2 ring-base-300 opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <img
+                      src={avatar.url}
+                      alt={avatar.label}
+                      className="size-full rounded-full"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">Full Name</span>

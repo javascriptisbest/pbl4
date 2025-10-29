@@ -8,6 +8,7 @@ import { Users, ArrowLeft } from "lucide-react";
 import ChatHeader from "./ChatHeader";
 import MessageInputSimple from "./MessageInputSimple";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
+import Avatar from "./Avatar";
 import MessageActions from "./MessageActions";
 import MessageReactions from "./MessageReactions";
 import ImageViewer from "./ImageViewer";
@@ -173,13 +174,11 @@ const UnifiedChatContainer = () => {
               {/* Avatar - always show */}
               <div className="chat-image avatar">
                 <div className="size-10 rounded-full border">
-                  <img
-                    src={
-                      message.senderId?.profilePic ||
-                      authUser.profilePic ||
-                      "/avatar.png"
-                    }
+                  <Avatar
+                    src={message.senderId?.profilePic || authUser.profilePic}
                     alt={message.senderId?.fullName || authUser.fullName}
+                    size="md"
+                    loading="lazy"
                   />
                 </div>
               </div>
@@ -205,8 +204,10 @@ const UnifiedChatContainer = () => {
                 />
 
                 {message.isDeleted ? (
-                  <div className="chat-bubble">
-                    <p className="italic text-gray-500 break-words">
+                  <div className={`chat-bubble max-w-[330px] opacity-60 ${
+                    isOwnMessage ? "chat-bubble-primary" : ""
+                  }`}>
+                    <p className="italic break-words overflow-wrap-anywhere">
                       {message.text}
                     </p>
                   </div>
@@ -223,6 +224,7 @@ const UnifiedChatContainer = () => {
                         alt="Attachment"
                         className="rounded-lg max-w-[250px] md:max-w-[300px] cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => setViewingImage(message.image)}
+                        loading="lazy"
                       />
                     )}
 
@@ -232,6 +234,7 @@ const UnifiedChatContainer = () => {
                         src={message.video}
                         controls
                         className="rounded-lg max-w-[250px] md:max-w-[300px]"
+                        preload="metadata"
                       >
                         Your browser does not support the video tag.
                       </video>
@@ -239,14 +242,14 @@ const UnifiedChatContainer = () => {
 
                     {/* Audio */}
                     {message.audio && (
-                      <div className="bg-green-100 dark:bg-green-800 p-3 rounded-lg max-w-[250px]">
+                      <div className="bg-accent/20 p-3 rounded-lg max-w-[250px]">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="text-2xl">🎤</div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm">
                               Voice Message
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs opacity-60">
                               {message.audioDuration
                                 ? formatAudioDuration(message.audioDuration)
                                 : "Audio"}
@@ -266,14 +269,14 @@ const UnifiedChatContainer = () => {
 
                     {/* File */}
                     {message.file && (
-                      <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg max-w-[250px]">
+                      <div className="bg-base-200 p-3 rounded-lg max-w-[250px]">
                         <div className="flex items-center gap-2">
                           <div className="text-2xl">📄</div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm truncate">
                               {message.fileName}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs opacity-60">
                               {(message.fileSize / 1024 / 1024).toFixed(2)} MB •{" "}
                               {message.fileType}
                             </div>
@@ -282,7 +285,7 @@ const UnifiedChatContainer = () => {
                         <a
                           href={message.file}
                           download={message.fileName}
-                          className="block mt-2 text-blue-500 hover:text-blue-600 text-sm"
+                          className="block mt-2 text-primary hover:text-primary-focus text-sm"
                         >
                           Download
                         </a>
@@ -291,8 +294,14 @@ const UnifiedChatContainer = () => {
 
                     {/* Text */}
                     {message.text && (
-                      <div className="chat-bubble">
-                        <p className="break-words">{message.text}</p>
+                      <div className={`chat-bubble max-w-[330px] ${
+                        isOwnMessage 
+                          ? "chat-bubble-primary" 
+                          : ""
+                      }`}>
+                        <p className="break-words overflow-wrap-anywhere">
+                          {message.text}
+                        </p>
                       </div>
                     )}
                   </div>

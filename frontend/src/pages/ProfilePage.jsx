@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Camera, Mail, User } from "lucide-react";
+import Avatar from "../components/Avatar";
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
@@ -34,11 +35,22 @@ const ProfilePage = () => {
 
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              <img
-                src={selectedImg || authUser.profilePic || "/avatar.png"}
-                alt="Profile"
-                className="size-32 rounded-full object-cover border-4 "
-              />
+              {selectedImg ? (
+                <img
+                  src={selectedImg}
+                  alt="Profile"
+                  className="size-32 rounded-full object-cover border-4"
+                  loading="eager"
+                />
+              ) : (
+                <Avatar
+                  src={authUser.profilePic}
+                  alt={authUser.fullName}
+                  size="xl"
+                  loading="eager"
+                  className="border-4"
+                />
+              )}
               <label
                 htmlFor="avatar-upload"
                 className={`
@@ -92,7 +104,7 @@ const ProfilePage = () => {
               </div>
               <div className="flex items-center justify-between py-2">
                 <span>Account Status</span>
-                <span className="text-green-500">Active</span>
+                <span className="text-success">Active</span>
               </div>
             </div>
           </div>

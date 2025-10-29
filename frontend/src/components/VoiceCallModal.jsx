@@ -172,11 +172,11 @@ const VoiceCallModal = ({
 
           <div className="text-sm text-base-content/60">
             {isConnected ? (
-              <span className="text-green-500">
+              <span className="text-success">
                 Connected • {formatTime(callDuration)}
               </span>
             ) : (
-              <span className="text-yellow-500">
+              <span className="text-warning">
                 {connectionStatus === "connecting"
                   ? "Connecting..."
                   : "Waiting..."}
@@ -250,10 +250,10 @@ const VoiceCallModal = ({
             </div>
           )}
           {connectionStatus === "connected" && (
-            <span className="text-green-500">🟢 Voice call active</span>
+            <span className="text-success">🟢 Voice call active</span>
           )}
           {connectionStatus === "disconnected" && (
-            <span className="text-red-500">Call ended</span>
+            <span className="text-error">Call ended</span>
           )}
         </div>
       </div>

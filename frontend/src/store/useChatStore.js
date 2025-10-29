@@ -1,7 +1,7 @@
 /**
  * Chat Store - Zustand State Management
  * Quản lý state cho direct chat (1-1 messaging)
- * 
+ *
  * Zustand là lightweight alternative cho Redux
  * Đơn giản hơn, ít boilerplate code hơn
  */
@@ -45,7 +45,7 @@ export const useChatStore = create((set, get) => ({
   /**
    * Action: sendMessage
    * Gửi tin nhắn với optimistic UI update
-   * 
+   *
    * Flow:
    * 1. Tạo tempMessage ngay lập tức để UI responsive
    * 2. Gửi request lên server
@@ -103,14 +103,23 @@ export const useChatStore = create((set, get) => ({
   },
 
   subscribeToMessages: () => {
-    const { selectedUser } = get();
-    if (!selectedUser) return;
-
     const socket = useAuthStore.getState().socket;
+    if (!socket) return;
+
+    // Unsubscribe trước để tránh duplicate listeners
+    socket.off("newMessage");
+    socket.off("messageReaction");
+    socket.off("messageDeleted");
 
     socket.on("newMessage", (newMessage) => {
+      const { selectedUser } = get();
+
+      // Chỉ add message nếu đang chat với người gửi
       const isMessageSentFromSelectedUser =
-        newMessage.senderId === selectedUser._id;
+        selectedUser &&
+        (newMessage.senderId === selectedUser._id ||
+          newMessage.senderId?._id === selectedUser._id);
+
       if (!isMessageSentFromSelectedUser) return;
 
       set({

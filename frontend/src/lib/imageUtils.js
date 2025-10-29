@@ -1,9 +1,9 @@
 /**
  * Image & Media Utils
- * 
+ *
  * Utility functions để xử lý images, videos và files
  * trước khi upload lên server (Cloudinary)
- * 
+ *
  * Features:
  * - Compress images để giảm bandwidth
  * - Convert file sang base64 để gửi qua HTTP
@@ -15,12 +15,12 @@ import { axiosInstance } from "./axios";
 
 /**
  * Compress image file để giảm kích thước
- * 
+ *
  * Tại sao cần compress:
  * - Giảm bandwidth khi upload
  * - Tăng tốc độ load ảnh
  * - Tiết kiệm storage trên cloud
- * 
+ *
  * @param {File} imageFile - Image file cần compress
  * @param {Object} options - Compression options (optional)
  * @returns {Promise<File>} - Compressed image file
@@ -60,12 +60,12 @@ export const compressImage = async (imageFile, options = {}) => {
 
 /**
  * Convert File object sang base64 string
- * 
+ *
  * Tại sao dùng base64:
  * - Dễ gửi qua HTTP JSON payload
  * - Không cần multipart/form-data
  * - Backend có thể upload trực tiếp lên Cloudinary
- * 
+ *
  * @param {File} file - File cần convert
  * @returns {Promise<string>} - Base64 data URL
  */

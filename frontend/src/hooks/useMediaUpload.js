@@ -1,16 +1,16 @@
 /**
  * useMediaUpload - Custom React Hook
- * 
+ *
  * Hook để xử lý upload các loại media (image, video, file, audio)
  * trong MessageInput component
- * 
+ *
  * Features:
  * - Image: Compress trước khi upload
  * - Video: Validate size và lấy metadata
  * - Audio: Voice recording processing
  * - File: Upload documents/PDFs
  * - Progress tracking
- * 
+ *
  * Returns:
  * - State: previews, metadata, isUploading, uploadProgress
  * - Actions: handleImageSelect, handleVideoSelect, etc.
@@ -28,19 +28,19 @@ export const useMediaUpload = () => {
   const [videoPreview, setVideoPreview] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [audioPreview, setAudioPreview] = useState(null);
-  
+
   // Metadata states - Thông tin về file (size, duration, etc.)
   const [videoMetadata, setVideoMetadata] = useState(null);
   const [fileMetadata, setFileMetadata] = useState(null);
   const [audioMetadata, setAudioMetadata] = useState(null);
-  
+
   // Upload states
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
 
   /**
    * Xử lý khi user chọn image file
-   * 
+   *
    * Flow:
    * 1. Validate file type
    * 2. Compress image để giảm size
@@ -74,7 +74,7 @@ export const useMediaUpload = () => {
 
   /**
    * Xử lý khi user chọn video file
-   * 
+   *
    * Flow:
    * 1. Validate file type và size (100MB limit)
    * 2. Lấy metadata (duration, dimensions)

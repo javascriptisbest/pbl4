@@ -143,14 +143,14 @@ const ChatContainer = () => {
 
                     {/* Audio - no bubble */}
                     {message.audio && (
-                      <div className="bg-green-100 dark:bg-green-800 p-3 rounded-lg max-w-[250px]">
+                      <div className="bg-accent/20 p-3 rounded-lg max-w-[250px]">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="text-2xl">🎤</div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm">
                               Voice Message
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs opacity-60">
                               {message.audioDuration
                                 ? formatAudioDuration(message.audioDuration)
                                 : "Audio"}
@@ -170,14 +170,14 @@ const ChatContainer = () => {
 
                     {/* File - no bubble */}
                     {message.file && (
-                      <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg max-w-[250px]">
+                      <div className="bg-base-200 p-3 rounded-lg max-w-[250px]">
                         <div className="flex items-center gap-2">
                           <div className="text-2xl">📄</div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm truncate">
                               {message.fileName}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs opacity-60">
                               {(message.fileSize / 1024 / 1024).toFixed(2)} MB •{" "}
                               {message.fileType}
                             </div>
@@ -186,7 +186,7 @@ const ChatContainer = () => {
                         <a
                           href={message.file}
                           download={message.fileName}
-                          className="block mt-2 text-blue-500 hover:text-blue-600 text-sm"
+                          className="block mt-2 text-primary hover:text-primary-focus text-sm"
                         >
                           Download
                         </a>

@@ -1,9 +1,9 @@
 /**
  * Auth Middleware - JWT Authentication
- * 
+ *
  * Middleware để protect các routes cần authentication
  * Verify JWT token và attach user info vào request
- * 
+ *
  * Flow:
  * 1. Lấy JWT token từ HTTP-only cookie
  * 2. Verify token với JWT_SECRET
@@ -21,7 +21,9 @@ export const protectRoute = async (req, res, next) => {
     const token = req.cookies.jwt;
 
     if (!token) {
-      return res.status(401).json({ message: "Unauthorized - No Token Provided" });
+      return res
+        .status(401)
+        .json({ message: "Unauthorized - No Token Provided" });
     }
 
     // Verify token với secret key

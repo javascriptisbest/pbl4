@@ -14,3 +14,9 @@ export const generateToken = (userId, res) => {
 
   return token;
 };
+// creatcode (name,role) => {
+//   return jwt.sign({ name, role }, process.env.JWT_SECRET, { expiresIn: "7d" });
+// }
+//user : Minh, role: admin, token : toiquadeptrai
+//user : Minh , role : admin, token : toinguqua != toiquadeptrai
+// jwt.code(MInh, admin, jwtsecret ) => toiquadeptrai

@@ -129,6 +129,11 @@ export const useGroupStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
 
+    // Unsubscribe trước để tránh duplicate listeners
+    socket.off("newGroupMessage");
+    socket.off("newGroup");
+    socket.off("messageReaction");
+
     socket.on("newGroupMessage", (message) => {
       const { selectedGroup, groupMessages } = get();
       if (selectedGroup && selectedGroup._id === message.groupId) {
@@ -166,6 +171,7 @@ export const useGroupStore = create((set, get) => ({
     if (socket) {
       socket.off("newGroupMessage");
       socket.off("newGroup");
+      socket.off("messageReaction");
     }
   },
 

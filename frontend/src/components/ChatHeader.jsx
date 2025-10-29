@@ -2,6 +2,7 @@ import { X, Phone, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
+import Avatar from "./Avatar";
 
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser } = useChatStore();
@@ -52,9 +53,11 @@ const ChatHeader = () => {
           {/* Avatar */}
           <div className="avatar">
             <div className="size-10 rounded-full relative">
-              <img
-                src={selectedUser.profilePic || "/avatar.png"}
+              <Avatar
+                src={selectedUser.profilePic}
                 alt={selectedUser.fullName}
+                size="md"
+                loading="eager"
               />
             </div>
           </div>
