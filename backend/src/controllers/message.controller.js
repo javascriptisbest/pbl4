@@ -13,15 +13,20 @@ import { getReceiverSocketId, io } from "../lib/socket.js";
  * GET /api/messages/users
  * Lấy danh sách users để hiển thị trong sidebar
  * (Exclude user hiện tại, không lấy password)
+ *
+ * Performance: .lean() + .select() + index on email
  */
 export const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
-    
+
     // Tìm tất cả users trừ chính mình
     const filteredUsers = await User.find({
       _id: { $ne: loggedInUserId }, // $ne = not equal
-    }).select("-password"); // Không trả về password
+    })
+      .select("-password") // Không trả về password
+      .limit(100) // Limit 100 users (pagination nếu cần)
+      .lean(); // Plain objects cho performance
 
     res.status(200).json(filteredUsers);
   } catch (error) {
@@ -34,11 +39,21 @@ export const getUsersForSidebar = async (req, res) => {
  * GET /api/messages/:id
  * Lấy tất cả tin nhắn giữa 2 users
  * :id = userId của người đang chat
+ *
+ * Performance optimizations:
+ * - .lean() để return plain JS objects (nhanh hơn 5-10x)
+ * - .limit() để pagination (chỉ load 100 messages gần nhất)
+ * - .sort() để sắp xếp theo thời gian
+ * - Index sẽ tự động được dùng nhờ compound index
  */
 export const getMessages = async (req, res) => {
   try {
     const { id: userToChatId } = req.params;
     const myId = req.user._id;
+
+    // Pagination params (optional)
+    const limit = parseInt(req.query.limit) || 100; // Default 100 messages
+    const skip = parseInt(req.query.skip) || 0;
 
     // Tìm messages có senderId hoặc receiverId là 2 users này
     const messages = await Message.find({
@@ -46,9 +61,15 @@ export const getMessages = async (req, res) => {
         { senderId: myId, receiverId: userToChatId }, // Tin mình gửi
         { senderId: userToChatId, receiverId: myId }, // Tin người kia gửi
       ],
-    }).populate("senderId", "fullName profilePic"); // Populate thông tin sender
+      isDeleted: false, // Không lấy messages đã xóa
+    })
+      .populate("senderId", "fullName profilePic") // Populate thông tin sender
+      .sort({ createdAt: -1 }) // Sort mới nhất trước
+      .limit(limit) // Giới hạn số lượng
+      .skip(skip) // Pagination offset
+      .lean(); // Return plain objects (faster)
 
-    res.status(200).json(messages);
+    res.status(200).json(messages.reverse()); // Reverse để cũ nhất ở đầu
   } catch (error) {
     console.log("Error in getMessages controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });

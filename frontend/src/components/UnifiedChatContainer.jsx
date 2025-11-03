@@ -4,7 +4,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
 import { formatAudioDuration } from "../lib/voiceUtils";
-import { Users, ArrowLeft } from "lucide-react";
+import { Users, ArrowLeft, ArrowDown } from "lucide-react";
 import ChatHeader from "./ChatHeader";
 import MessageInputSimple from "./MessageInputSimple";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
@@ -159,165 +159,181 @@ const UnifiedChatContainer = () => {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {currentMessages.map((message) => {
-          // Handle both populated and non-populated senderId
-          const senderId = message.senderId?._id || message.senderId;
-          const isOwnMessage = senderId === authUser._id;
+        {currentMessages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="text-6xl mb-4">👋</div>
+            <p className="text-lg font-medium mb-1">No messages yet</p>
+            <p className="text-sm text-base-content/60">
+              {isGroupChat
+                ? "Start the conversation with your group"
+                : "Send a message to start chatting"}
+            </p>
+          </div>
+        ) : (
+          currentMessages.map((message) => {
+            // Handle both populated and non-populated senderId
+            const senderId = message.senderId?._id || message.senderId;
+            const isOwnMessage = senderId === authUser._id;
 
-          return (
-            <div
-              key={message._id}
-              className={`chat group relative ${
-                isOwnMessage ? "chat-end" : "chat-start"
-              }`}
-            >
-              {/* Avatar - always show */}
-              <div className="chat-image avatar">
-                <div className="size-10 rounded-full border">
-                  <Avatar
-                    src={message.senderId?.profilePic || authUser.profilePic}
-                    alt={message.senderId?.fullName || authUser.fullName}
-                    size="md"
-                    loading="lazy"
-                  />
+            return (
+              <div
+                key={message._id}
+                className={`chat group relative ${
+                  isOwnMessage ? "chat-end" : "chat-start"
+                }`}
+              >
+                {/* Avatar - always show */}
+                <div className="chat-image avatar">
+                  <div className="size-10 rounded-full border">
+                    <Avatar
+                      src={message.senderId?.profilePic || authUser.profilePic}
+                      alt={message.senderId?.fullName || authUser.fullName}
+                      size="md"
+                      loading="lazy"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Name - only show in group chat */}
-              {isGroupChat && (
-                <div className="chat-header mb-1">
-                  <span className="font-medium text-sm">
-                    {message.senderId?.fullName || "User"}
-                  </span>
-                  <time className="text-xs opacity-50 ml-1">
-                    {formatMessageTime(message.createdAt)}
-                  </time>
-                </div>
-              )}
-
-              <div className="relative">
-                <MessageActions
-                  message={message}
-                  isOwnMessage={isOwnMessage}
-                  onReaction={handleAddReaction}
-                  onDelete={handleDeleteMessage}
-                />
-
-                {message.isDeleted ? (
-                  <div className={`chat-bubble max-w-[330px] opacity-60 ${
-                    isOwnMessage ? "chat-bubble-primary" : ""
-                  }`}>
-                    <p className="italic break-words overflow-wrap-anywhere">
-                      {message.text}
-                    </p>
+                {/* Name & Time */}
+                {isGroupChat ? (
+                  <div className="chat-header mb-1">
+                    <span className="font-medium text-sm">
+                      {message.senderId?.fullName || "User"}
+                    </span>
+                    <time className="text-xs opacity-50 ml-1">
+                      {formatMessageTime(message.createdAt)}
+                    </time>
                   </div>
                 ) : (
-                  <div
-                    className={`flex flex-col gap-1 ${
-                      isOwnMessage ? "items-end" : "items-start"
-                    }`}
-                  >
-                    {/* Image */}
-                    {message.image && (
-                      <img
-                        src={message.image}
-                        alt="Attachment"
-                        className="rounded-lg max-w-[250px] md:max-w-[300px] cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => setViewingImage(message.image)}
-                        loading="lazy"
-                      />
-                    )}
-
-                    {/* Video */}
-                    {message.video && (
-                      <video
-                        src={message.video}
-                        controls
-                        className="rounded-lg max-w-[250px] md:max-w-[300px]"
-                        preload="metadata"
-                      >
-                        Your browser does not support the video tag.
-                      </video>
-                    )}
-
-                    {/* Audio */}
-                    {message.audio && (
-                      <div className="bg-accent/20 p-3 rounded-lg max-w-[250px]">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="text-2xl">🎤</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">
-                              Voice Message
-                            </div>
-                            <div className="text-xs opacity-60">
-                              {message.audioDuration
-                                ? formatAudioDuration(message.audioDuration)
-                                : "Audio"}
-                            </div>
-                          </div>
-                        </div>
-                        <audio
-                          controls
-                          className="w-full h-8"
-                          src={message.audio}
-                          preload="metadata"
-                        >
-                          Your browser does not support the audio element.
-                        </audio>
-                      </div>
-                    )}
-
-                    {/* File */}
-                    {message.file && (
-                      <div className="bg-base-200 p-3 rounded-lg max-w-[250px]">
-                        <div className="flex items-center gap-2">
-                          <div className="text-2xl">📄</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate">
-                              {message.fileName}
-                            </div>
-                            <div className="text-xs opacity-60">
-                              {(message.fileSize / 1024 / 1024).toFixed(2)} MB •{" "}
-                              {message.fileType}
-                            </div>
-                          </div>
-                        </div>
-                        <a
-                          href={message.file}
-                          download={message.fileName}
-                          className="block mt-2 text-primary hover:text-primary-focus text-sm"
-                        >
-                          Download
-                        </a>
-                      </div>
-                    )}
-
-                    {/* Text */}
-                    {message.text && (
-                      <div className={`chat-bubble max-w-[330px] ${
-                        isOwnMessage 
-                          ? "chat-bubble-primary" 
-                          : ""
-                      }`}>
-                        <p className="break-words overflow-wrap-anywhere">
-                          {message.text}
-                        </p>
-                      </div>
-                    )}
+                  <div className="chat-footer opacity-50 text-xs mt-1">
+                    {formatMessageTime(message.createdAt)}
                   </div>
                 )}
 
-                {!message.isDeleted && (
-                  <MessageReactions
-                    reactions={message.reactions}
-                    messageId={message._id}
-                    onReactionClick={handleAddReaction}
+                <div className="relative">
+                  <MessageActions
+                    message={message}
+                    isOwnMessage={isOwnMessage}
+                    onReaction={handleAddReaction}
+                    onDelete={handleDeleteMessage}
                   />
-                )}
+
+                  {message.isDeleted ? (
+                    <div
+                      className={`chat-bubble max-w-[330px] opacity-60 italic ${
+                        isOwnMessage ? "chat-bubble-primary" : ""
+                      }`}
+                    >
+                      <p className="text-sm">🚫 This message was deleted</p>
+                    </div>
+                  ) : (
+                    <div
+                      className={`flex flex-col gap-1 ${
+                        isOwnMessage ? "items-end" : "items-start"
+                      }`}
+                    >
+                      {/* Image */}
+                      {message.image && (
+                        <img
+                          src={message.image}
+                          alt="Attachment"
+                          className="rounded-lg max-w-[250px] md:max-w-[300px] cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => setViewingImage(message.image)}
+                          loading="lazy"
+                        />
+                      )}
+
+                      {/* Video */}
+                      {message.video && (
+                        <video
+                          src={message.video}
+                          controls
+                          className="rounded-lg max-w-[250px] md:max-w-[300px]"
+                          preload="metadata"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      )}
+
+                      {/* Audio */}
+                      {message.audio && (
+                        <div className="bg-accent/20 p-3 rounded-lg max-w-[250px]">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="text-2xl">🎤</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm">
+                                Voice Message
+                              </div>
+                              <div className="text-xs opacity-60">
+                                {message.audioDuration
+                                  ? formatAudioDuration(message.audioDuration)
+                                  : "Audio"}
+                              </div>
+                            </div>
+                          </div>
+                          <audio
+                            controls
+                            className="w-full h-8"
+                            src={message.audio}
+                            preload="metadata"
+                          >
+                            Your browser does not support the audio element.
+                          </audio>
+                        </div>
+                      )}
+
+                      {/* File */}
+                      {message.file && (
+                        <div className="bg-base-200 p-3 rounded-lg max-w-[250px]">
+                          <div className="flex items-center gap-2">
+                            <div className="text-2xl">📄</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm truncate">
+                                {message.fileName}
+                              </div>
+                              <div className="text-xs opacity-60">
+                                {(message.fileSize / 1024 / 1024).toFixed(2)} MB
+                                • {message.fileType}
+                              </div>
+                            </div>
+                          </div>
+                          <a
+                            href={message.file}
+                            download={message.fileName}
+                            className="block mt-2 text-primary hover:text-primary-focus text-sm"
+                          >
+                            Download
+                          </a>
+                        </div>
+                      )}
+
+                      {/* Text */}
+                      {message.text && (
+                        <div
+                          className={`chat-bubble max-w-[330px] ${
+                            isOwnMessage ? "chat-bubble-primary" : ""
+                          }`}
+                        >
+                          <p className="break-words whitespace-pre-wrap">
+                            {message.text}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!message.isDeleted && (
+                    <MessageReactions
+                      reactions={message.reactions}
+                      messageId={message._id}
+                      onReactionClick={handleAddReaction}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
         <div ref={messageEndRef} />
       </div>
 

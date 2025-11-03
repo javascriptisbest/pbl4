@@ -2,7 +2,7 @@ import { useState } from "react";
 
 /**
  * Avatar Component - Hiển thị ảnh đại diện hoặc chữ cái đầu
- * 
+ *
  * Tính năng:
  * - Tự động tạo avatar từ chữ cái đầu tên nếu không có ảnh
  * - Màu nền deterministic (cùng tên = cùng màu)
@@ -10,17 +10,26 @@ import { useState } from "react";
  * - Auto fallback nếu ảnh lỗi
  * - NHANH: Không cần gọi API bên ngoài như avatar.iran.liara.run
  */
-const Avatar = ({ src, alt, className = "", size = "md", loading = "lazy" }) => {
+const Avatar = ({
+  src,
+  alt,
+  className = "",
+  size = "md",
+  loading = "lazy",
+}) => {
   const [imageError, setImageError] = useState(false);
 
   // Tạo avatar từ chữ cái đầu
   const getInitials = (name) => {
-    if (!name) return "?";
-    const parts = name.trim().split(" ");
+    if (!name || !name.trim()) return "?";
+    const parts = name
+      .trim()
+      .split(" ")
+      .filter((p) => p);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
-    return name[0].toUpperCase();
+    return name.trim()[0].toUpperCase();
   };
 
   // Tạo màu từ tên (deterministic - cùng tên luôn cùng màu)

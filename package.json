@@ -3,11 +3,23 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
-    "start": "npm run start --prefix backend"
+    "start": "npm run start --prefix backend",
+    "load-test": "node load-test.js",
+    "load-test:simple": "node simple-load-test.js",
+    "load-test:realistic": "node realistic-load-test.js",
+    "load-test:group": "node group-load-test.js",
+    "stress-test": "node stress-test.js",
+    "throughput-test": "node throughput-test.js",
+    "monitor": "node monitor.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "socket.io-client": "^4.8.1",
+    "axios": "^1.7.7"
+  }
 }

@@ -1,9 +1,9 @@
 /**
  * Message Model - MongoDB Schema
- * 
+ *
  * Schema cho tin nhắn trong hệ thống chat
  * Hỗ trợ cả Direct Chat (1-1) và Group Chat
- * 
+ *
  * Features:
  * - Multi-media support (text, image, video, audio, file)
  * - Message reactions (emoji)
@@ -21,31 +21,31 @@ const messageSchema = new mongoose.Schema(
       ref: "User", // Reference đến User model
       required: true,
     },
-    
+
     // Người nhận - chỉ có trong direct chat
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-    
+
     // Group - chỉ có trong group chat
     groupId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Group",
     },
-    
+
     // Loại tin nhắn: direct (1-1) hoặc group
     messageType: {
       type: String,
       enum: ["direct", "group"],
       default: "direct",
     },
-    
+
     // Nội dung tin nhắn
     text: {
       type: String,
     },
-    
+
     // Media URLs (lưu trên Cloudinary)
     image: {
       type: String, // URL của ảnh
@@ -71,20 +71,20 @@ const messageSchema = new mongoose.Schema(
     fileType: {
       type: String, // MIME type (application/pdf, etc.)
     },
-    
+
     // Reply feature - reference đến tin nhắn được reply
     replyToId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Message",
     },
-    
+
     // Loại media chính của tin nhắn
     mediaType: {
       type: String,
       enum: ["text", "image", "video", "audio", "file"],
       default: "text",
     },
-    
+
     // Emoji reactions - array of reactions
     reactions: [
       {
@@ -103,7 +103,7 @@ const messageSchema = new mongoose.Schema(
         },
       },
     ],
-    
+
     // Soft delete - không xóa thật khỏi DB
     isDeleted: {
       type: Boolean,
@@ -113,10 +113,32 @@ const messageSchema = new mongoose.Schema(
       type: Date,
     },
   },
-  { 
-    timestamps: true // Tự động thêm createdAt và updatedAt
+  {
+    timestamps: true, // Tự động thêm createdAt và updatedAt
   }
 );
+
+// ===== DATABASE INDEXES FOR PERFORMANCE =====
+
+// 1. Index cho direct chat queries (getMessages)
+// Tìm messages giữa 2 users nhanh hơn 10-100x
+messageSchema.index({ senderId: 1, receiverId: 1 });
+messageSchema.index({ receiverId: 1, senderId: 1 });
+
+// 2. Index cho group chat queries
+messageSchema.index({ groupId: 1, createdAt: -1 });
+
+// 3. Index cho soft delete queries
+// Chỉ lấy messages chưa bị xóa
+messageSchema.index({ isDeleted: 1 });
+
+// 4. Compound index cho pagination
+// Sort by createdAt khi query messages
+messageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
+messageSchema.index({ groupId: 1, createdAt: -1 });
+
+// 5. Index cho messageType (nếu cần filter by type)
+messageSchema.index({ messageType: 1 });
 
 const Message = mongoose.model("Message", messageSchema);
 
