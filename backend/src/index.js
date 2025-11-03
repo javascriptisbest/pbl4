@@ -69,21 +69,21 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests from Vercel domains and localhost for development
       const allowedOrigins = [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'https://pbl4-one.vercel.app',
-        'https://pbl4-git-master-minhs-projects-0e5f2d90.vercel.app',
-        'https://pbl4-8oarlfzrf-minhs-projects-0e5f2d90.vercel.app',
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://pbl4-one.vercel.app",
+        "https://pbl4-git-master-minhs-projects-0e5f2d90.vercel.app",
+        "https://pbl4-8oarlfzrf-minhs-projects-0e5f2d90.vercel.app",
         /^https:\/\/pbl4.*\.vercel\.app$/,
-        /\.onrender\.com$/
+        /\.onrender\.com$/,
       ];
-      
+
       // Allow requests with no origin (mobile apps, etc.)
       if (!origin) return callback(null, true);
-      
+
       // Check if origin matches any allowed pattern
-      const isAllowed = allowedOrigins.some(allowed => {
-        if (typeof allowed === 'string') {
+      const isAllowed = allowedOrigins.some((allowed) => {
+        if (typeof allowed === "string") {
           return origin === allowed;
         }
         if (allowed instanceof RegExp) {
@@ -91,11 +91,11 @@ app.use(
         }
         return false;
       });
-      
+
       if (isAllowed) {
         callback(null, true);
       } else {
-        console.log('CORS blocked origin:', origin);
+        console.log("CORS blocked origin:", origin);
         callback(null, true); // Allow all for now, change to false in production
       }
     },

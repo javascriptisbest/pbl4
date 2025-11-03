@@ -302,7 +302,8 @@ class GroupChatLoadTest {
     const successRate =
       (this.stats.messagesSent / (ACTIVE_SENDERS * MESSAGES_PER_SENDER)) * 100;
     // Server doesn't broadcast to sender, so each message reaches (users.length - 1) members
-    const expectedBroadcasts = this.stats.messagesSent * (this.users.length - 1);
+    const expectedBroadcasts =
+      this.stats.messagesSent * (this.users.length - 1);
     const actualReceiveRate =
       (this.stats.messagesReceived / expectedBroadcasts) * 100;
 
@@ -333,15 +334,20 @@ class GroupChatLoadTest {
 
     console.log("\n💡 Notes:");
     console.log(
-      `   - Each message broadcast to ${this.users.length - 1} members (sender excluded)`
+      `   - Each message broadcast to ${
+        this.users.length - 1
+      } members (sender excluded)`
     );
     console.log(
-      `   - Total broadcast operations: ${this.stats.messagesSent} × ${this.users.length - 1} = ${expectedBroadcasts}`
+      `   - Total broadcast operations: ${this.stats.messagesSent} × ${
+        this.users.length - 1
+      } = ${expectedBroadcasts}`
     );
     console.log(
-      `   - Server load: ${(messagesPerSecond * (this.users.length - 1)).toFixed(
-        2
-      )} broadcasts/second`
+      `   - Server load: ${(
+        messagesPerSecond *
+        (this.users.length - 1)
+      ).toFixed(2)} broadcasts/second`
     );
   }
 
@@ -357,9 +363,9 @@ class GroupChatLoadTest {
       `Scenario: ${NUM_USERS} users in 1 group, ${ACTIVE_SENDERS} active senders`
     );
     console.log(
-      `Total: ${
-        ACTIVE_SENDERS * MESSAGES_PER_SENDER
-      } messages × ${NUM_USERS - 1} broadcasts (sender excluded)\n`
+      `Total: ${ACTIVE_SENDERS * MESSAGES_PER_SENDER} messages × ${
+        NUM_USERS - 1
+      } broadcasts (sender excluded)\n`
     );
 
     try {
