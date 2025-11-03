@@ -67,16 +67,17 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests from Vercel domains and localhost for development
+      // Get domains from environment variables
       const allowedOrigins = [
         "http://localhost:5173",
         "http://localhost:3000",
-        "https://pbl4-one.vercel.app",
-        "https://pbl4-git-master-minhs-projects-0e5f2d90.vercel.app",
-        "https://pbl4-8oarlfzrf-minhs-projects-0e5f2d90.vercel.app",
+        process.env.FRONTEND_URL,
+        `https://${process.env.VERCEL_DOMAIN}`,
+        `https://${process.env.VERCEL_GIT_DOMAIN}`,
+        `https://${process.env.VERCEL_PREVIEW_DOMAIN}`,
         /^https:\/\/pbl4.*\.vercel\.app$/,
         /\.onrender\.com$/,
-      ];
+      ].filter(Boolean); // Remove undefined values
 
       // Allow requests with no origin (mobile apps, etc.)
       if (!origin) return callback(null, true);
@@ -96,6 +97,7 @@ app.use(
         callback(null, true);
       } else {
         console.log("CORS blocked origin:", origin);
+        console.log("Allowed origins:", allowedOrigins);
         callback(null, true); // Allow all for now, change to false in production
       }
     },

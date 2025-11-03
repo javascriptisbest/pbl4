@@ -4,7 +4,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
 import { formatAudioDuration } from "../lib/voiceUtils";
-import { Users, ArrowLeft, ArrowDown } from "lucide-react";
+import { Users, ArrowLeft } from "lucide-react";
 import ChatHeader from "./ChatHeader";
 import MessageInputSimple from "./MessageInputSimple";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
