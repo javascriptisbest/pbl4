@@ -4,10 +4,7 @@ import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { VoiceCallManager } from "../lib/voiceCallUtils.js";
 
-const BASE_URL =
-  import.meta.env.MODE === "development"
-    ? import.meta.env.VITE_SOCKET_URL || "http://localhost:5002"
-    : "/";
+const BASE_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5002";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,

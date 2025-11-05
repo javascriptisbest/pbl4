@@ -17,6 +17,10 @@ const io = new Server(server, {
       "http://localhost:5174",
       "http://10.10.30.33:5173",
       "http://10.10.30.33:5174",
+      "https://pbl4-one.vercel.app",
+      "https://pbl4-git-master-minhs-projects-0e5f2d90.vercel.app",
+      "https://pbl4-8oarlfzrf-minhs-projects-0e5f2d90.vercel.app",
+      /^https:\/\/pbl4.*\.vercel\.app$/,
     ],
     credentials: true, // Cho phép gửi cookies
   },
