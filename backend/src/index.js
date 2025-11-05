@@ -110,29 +110,3 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`Backend accessible at: http://10.10.30.33:${PORT}`);
   connectDB();
 });
-
-async function handleImageUpload(file) {
-  const options = {
-    maxSizeMB: 1, // tối đa 1MB
-    maxWidthOrHeight: 1024, // resize nếu lớn hơn 1024px
-    useWebWorker: true,
-  };
-  const compressedFile = await imageCompression(file, options);
-  // Tiếp tục upload compressedFile lên server hoặc Cloudinary
-}
-// routes/image.route.js
-// import express from "express"; // Removed duplicate import
-
-const router = express.Router();
-
-router.post("/upload", async (req, res) => {
-  try {
-    const { image } = req.body; // base64 hoặc file
-    const uploadResponse = await cloudinary.uploader.upload(image);
-    res.json({ url: uploadResponse.secure_url });
-  } catch (error) {
-    res.status(500).json({ error: "Upload failed" });
-  }
-});
-
-export default router;
