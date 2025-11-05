@@ -67,39 +67,10 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Get domains from environment variables
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        process.env.FRONTEND_URL,
-        `https://${process.env.VERCEL_DOMAIN}`,
-        `https://${process.env.VERCEL_GIT_DOMAIN}`,
-        `https://${process.env.VERCEL_PREVIEW_DOMAIN}`,
-        /^https:\/\/pbl4.*\.vercel\.app$/,
-        /\.onrender\.com$/,
-      ].filter(Boolean); // Remove undefined values
-
-      // Allow requests with no origin (mobile apps, etc.)
-      if (!origin) return callback(null, true);
-
-      // Check if origin matches any allowed pattern
-      const isAllowed = allowedOrigins.some((allowed) => {
-        if (typeof allowed === "string") {
-          return origin === allowed;
-        }
-        if (allowed instanceof RegExp) {
-          return allowed.test(origin);
-        }
-        return false;
-      });
-
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        console.log("CORS blocked origin:", origin);
-        console.log("Allowed origins:", allowedOrigins);
-        callback(null, true); // Allow all for now, change to false in production
-      }
+      // TEMPORARY: Allow all origins for testing
+      // TODO: Restrict to specific domains in production
+      console.log("CORS request from origin:", origin);
+      callback(null, true);
     },
     credentials: true,
   })
