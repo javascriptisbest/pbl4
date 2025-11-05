@@ -5,28 +5,30 @@
  * Tests CORS and basic API endpoints
  */
 
-import fetch from 'node-fetch';
+import fetch from "node-fetch";
 
-const API_BASE = 'https://pbl4-jecm.onrender.com/api';
-const FRONTEND_ORIGIN = 'https://pbl4-one.vercel.app';
+const API_BASE = "https://pbl4-jecm.onrender.com/api";
+const FRONTEND_ORIGIN = "https://pbl4-one.vercel.app";
 
 async function testAPI() {
-  console.log('🧪 Testing API connectivity...\n');
+  console.log("🧪 Testing API connectivity...\n");
 
   // Test 1: Health check
   try {
-    console.log('1️⃣ Testing health endpoint...');
+    console.log("1️⃣ Testing health endpoint...");
     const response = await fetch(`${API_BASE}/health`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Origin': FRONTEND_ORIGIN,
-        'User-Agent': 'API-Test-Script'
-      }
+        Origin: FRONTEND_ORIGIN,
+        "User-Agent": "API-Test-Script",
+      },
     });
-    
+
     console.log(`   Status: ${response.status}`);
-    console.log(`   CORS Headers: ${response.headers.get('access-control-allow-origin')}`);
-    
+    console.log(
+      `   CORS Headers: ${response.headers.get("access-control-allow-origin")}`
+    );
+
     if (response.ok) {
       const data = await response.json();
       console.log(`   ✅ Health check OK - uptime: ${data.uptime}s`);
@@ -37,22 +39,24 @@ async function testAPI() {
     console.log(`   ❌ Health check error: ${error.message}`);
   }
 
-  console.log('');
+  console.log("");
 
   // Test 2: Auth check (expect 401 without auth)
   try {
-    console.log('2️⃣ Testing auth/check endpoint...');
+    console.log("2️⃣ Testing auth/check endpoint...");
     const response = await fetch(`${API_BASE}/auth/check`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Origin': FRONTEND_ORIGIN,
-        'User-Agent': 'API-Test-Script'
-      }
+        Origin: FRONTEND_ORIGIN,
+        "User-Agent": "API-Test-Script",
+      },
     });
-    
+
     console.log(`   Status: ${response.status}`);
-    console.log(`   CORS Headers: ${response.headers.get('access-control-allow-origin')}`);
-    
+    console.log(
+      `   CORS Headers: ${response.headers.get("access-control-allow-origin")}`
+    );
+
     if (response.status === 401) {
       console.log(`   ✅ Expected 401 (not authenticated)`);
     } else {
@@ -62,25 +66,35 @@ async function testAPI() {
     console.log(`   ❌ Auth check error: ${error.message}`);
   }
 
-  console.log('');
+  console.log("");
 
   // Test 3: CORS preflight
   try {
-    console.log('3️⃣ Testing CORS preflight...');
+    console.log("3️⃣ Testing CORS preflight...");
     const response = await fetch(`${API_BASE}/auth/login`, {
-      method: 'OPTIONS',
+      method: "OPTIONS",
       headers: {
-        'Origin': FRONTEND_ORIGIN,
-        'Access-Control-Request-Method': 'POST',
-        'Access-Control-Request-Headers': 'Content-Type'
-      }
+        Origin: FRONTEND_ORIGIN,
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "Content-Type",
+      },
     });
-    
+
     console.log(`   Status: ${response.status}`);
-    console.log(`   Allow Origin: ${response.headers.get('access-control-allow-origin')}`);
-    console.log(`   Allow Methods: ${response.headers.get('access-control-allow-methods')}`);
-    console.log(`   Allow Credentials: ${response.headers.get('access-control-allow-credentials')}`);
-    
+    console.log(
+      `   Allow Origin: ${response.headers.get("access-control-allow-origin")}`
+    );
+    console.log(
+      `   Allow Methods: ${response.headers.get(
+        "access-control-allow-methods"
+      )}`
+    );
+    console.log(
+      `   Allow Credentials: ${response.headers.get(
+        "access-control-allow-credentials"
+      )}`
+    );
+
     if (response.status === 200 || response.status === 204) {
       console.log(`   ✅ CORS preflight OK`);
     } else {
@@ -90,7 +104,7 @@ async function testAPI() {
     console.log(`   ❌ CORS preflight error: ${error.message}`);
   }
 
-  console.log('\n🏁 Test complete!');
+  console.log("\n🏁 Test complete!");
 }
 
 // Run if called directly
