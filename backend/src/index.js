@@ -64,17 +64,31 @@ const uploadLimiter = rateLimit({
 app.use(express.json({ limit: "150mb" })); // Tăng lên 150MB cho file 100MB (base64 + overhead)
 app.use(express.urlencoded({ limit: "150mb", extended: true }));
 app.use(cookieParser());
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // TEMPORARY: Allow all origins for testing
-      // TODO: Restrict to specific domains in production
-      console.log("CORS request from origin:", origin);
+app.use(cors({
+  origin: function (origin, callback) {
+    // Production CORS with specific domains
+    const allowedOrigins = [
+      'https://pbl4-one.vercel.app',
+      'https://pbl4-git-master-minhs-projects-0e5f2d90.vercel.app',
+      'https://pbl4-8oarlfzrf-minhs-projects-0e5f2d90.vercel.app',
+      /^https:\/\/pbl4.*\.vercel\.app$/,
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+    
+    if (!origin || allowedOrigins.some(allowed => 
+      typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+    )) {
       callback(null, true);
-    },
-    credentials: true,
-  })
-);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
+}));
 
 // ===== HEALTH CHECK ENDPOINT =====
 app.get("/api/health", (req, res) => {

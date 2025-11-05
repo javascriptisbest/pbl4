@@ -50,7 +50,19 @@ io.on("connection", (socket) => {
 
   // Lấy userId từ query params khi client connect
   const userId = socket.handshake.query.userId;
-  if (userId) userSocketMap[userId] = socket.id;
+  console.log('🔗 Socket connection:', {
+    socketId: socket.id,
+    userId: userId,
+    query: socket.handshake.query,
+    headers: socket.handshake.headers
+  });
+  
+  if (userId) {
+    userSocketMap[userId] = socket.id;
+    console.log('✅ User mapped:', userId, '->', socket.id);
+  } else {
+    console.log('⚠️ No userId in query params');
+  }
 
   // Broadcast danh sách users online đến tất cả clients
   // io.emit() gửi đến ALL connected clients

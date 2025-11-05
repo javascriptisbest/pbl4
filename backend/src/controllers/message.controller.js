@@ -199,8 +199,18 @@ export const sendMessage = async (req, res) => {
     await newMessage.populate("senderId", "fullName profilePic");
 
     const receiverSocketId = getReceiverSocketId(receiverId);
+    console.log('🔍 Broadcasting message:', {
+      receiverId,
+      receiverSocketId,
+      messageId: newMessage._id,
+      allUsers: Object.keys(require('../lib/socket.js').userSocketMap || {})
+    });
+    
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
+      console.log('📤 Message broadcasted to:', receiverSocketId);
+    } else {
+      console.log('❌ Receiver not found online:', receiverId);
     }
 
     res.status(201).json(newMessage);

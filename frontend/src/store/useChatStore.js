@@ -56,9 +56,12 @@ export const useChatStore = create((set, get) => ({
     const { selectedUser, messages } = get();
     const authUser = useAuthStore.getState().authUser;
 
+    // Helper function: Chuẩn hóa ID (ObjectId vs string)
+    const toId = (v) => typeof v === 'object' && v?._id ? String(v._id) : String(v);
+
     // Optimistic UI Update: Tạo message tạm để hiển thị ngay
     const tempMessage = {
-      _id: Date.now().toString(), // Temporary ID
+      _id: `temp_${Date.now()}_${Math.random()}`, // Unique temporary ID
       text: messageData.text,
       image: messageData.image,
       video: messageData.video,
@@ -73,7 +76,7 @@ export const useChatStore = create((set, get) => ({
         fullName: authUser.fullName,
         profilePic: authUser.profilePic,
       },
-      receiverId: selectedUser._id,
+      receiverId: toId(selectedUser._id),
       createdAt: new Date().toISOString(),
       isPending: true, // Flag để biết đây là pending message
     };
@@ -87,17 +90,23 @@ export const useChatStore = create((set, get) => ({
         `/messages/send/${selectedUser._id}`,
         messageData
       );
+      
       // Replace temp message with real message from server
-      const updatedMessages = messages.filter(
-        (msg) => msg._id !== tempMessage._id
-      );
-      set({ messages: [...updatedMessages, res.data] });
+      set({
+        messages: (() => {
+          const currentMessages = get().messages;
+          // Remove temp message và add real message
+          const withoutTemp = currentMessages.filter(msg => msg._id !== tempMessage._id);
+          // Kiểm tra xem real message đã tồn tại chưa (tránh duplicate)
+          const hasRealMessage = withoutTemp.some(msg => msg._id === res.data._id);
+          return hasRealMessage ? withoutTemp : [...withoutTemp, res.data];
+        })(),
+      });
     } catch (error) {
       // Remove temp message on error
-      const updatedMessages = messages.filter(
-        (msg) => msg._id !== tempMessage._id
-      );
-      set({ messages: updatedMessages });
+      set({
+        messages: get().messages.filter(msg => msg._id !== tempMessage._id),
+      });
       toast.error(error.response?.data?.message || "Failed to send message");
     }
   },
@@ -113,17 +122,50 @@ export const useChatStore = create((set, get) => ({
 
     socket.on("newMessage", (newMessage) => {
       const { selectedUser } = get();
+      const { authUser } = useAuthStore.getState();
 
-      // Chỉ add message nếu đang chat với người gửi
-      const isMessageSentFromSelectedUser =
-        selectedUser &&
-        (newMessage.senderId === selectedUser._id ||
-          newMessage.senderId?._id === selectedUser._id);
+      // Helper function: Chuẩn hóa ID (ObjectId vs string)
+      const toId = (v) => typeof v === 'object' && v?._id ? String(v._id) : String(v);
+      
+      const selId = toId(selectedUser?._id);
+      const sId = toId(newMessage.senderId);
+      const rId = toId(newMessage.receiverId);
+      const meId = toId(authUser?._id);
 
-      if (!isMessageSentFromSelectedUser) return;
+      // Logic filtering "cứng" hơn:
+      // 1. Tin nhắn phải liên quan đến user hiện tại (là sender hoặc receiver)
+      const isMessageForMe = (sId === meId || rId === meId);
+      
+      // 2. Tin nhắn phải thuộc conversation đang mở
+      const isFromSelectedConversation = selectedUser && (sId === selId || rId === selId);
 
+      if (!selectedUser || !isMessageForMe || !isFromSelectedConversation) {
+        console.log('🚫 Message filtered out:', {
+          hasSelectedUser: !!selectedUser,
+          isForMe: isMessageForMe,
+          isFromConversation: isFromSelectedConversation,
+          selId, sId, rId, meId
+        });
+        return;
+      }
+
+      console.log('📨 New message accepted:', {
+        messageId: newMessage._id,
+        from: sId,
+        to: rId,
+        currentUser: meId,
+        selectedUser: selId
+      });
+
+      // Chống trùng tin (optimistic update vs server echo)
       set({
-        messages: [...get().messages, newMessage],
+        messages: (() => {
+          const msgs = get().messages;
+          // Nếu message đã tồn tại (theo _id), không add
+          return msgs.some(m => m._id === newMessage._id)
+            ? msgs
+            : [...msgs, newMessage];
+        })(),
       });
     });
 
