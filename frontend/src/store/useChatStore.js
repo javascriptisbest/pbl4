@@ -18,14 +18,48 @@ export const useChatStore = create((set, get) => ({
   selectedUser: null, // User đang được chọn để chat
   isUsersLoading: false, // Loading state khi fetch users
   isMessagesLoading: false, // Loading state khi fetch messages
+  usersCache: null, // Cache users data
+  usersCacheTime: null, // Thời gian cache
 
-  getUsers: async () => {
+  getUsers: async (forceRefresh = false) => {
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+    const now = Date.now();
+
+    // Kiểm tra cache trước
+    const { usersCache, usersCacheTime } = get();
+    if (
+      !forceRefresh &&
+      usersCache &&
+      usersCacheTime &&
+      now - usersCacheTime < CACHE_DURATION
+    ) {
+      console.log("📋 Using cached users data");
+      set({ users: usersCache });
+      return;
+    }
+
     set({ isUsersLoading: true });
+    const startTime = Date.now();
+
     try {
       const res = await axiosInstance.get("/messages/users");
-      set({ users: res.data });
+      const users = res.data;
+
+      set({
+        users,
+        usersCache: users,
+        usersCacheTime: now,
+      });
+
+      console.log(`👥 Users loaded in ${Date.now() - startTime}ms`);
     } catch (error) {
-      toast.error(error.response.data.message);
+      // Fallback to cache nếu có lỗi network
+      if (usersCache) {
+        console.log("📋 Network error, using cached users");
+        set({ users: usersCache });
+      } else {
+        toast.error(error.response?.data?.message || "Failed to load users");
+      }
     } finally {
       set({ isUsersLoading: false });
     }
@@ -33,11 +67,14 @@ export const useChatStore = create((set, get) => ({
 
   getMessages: async (userId) => {
     set({ isMessagesLoading: true });
+    const startTime = Date.now();
+
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
       set({ messages: res.data });
+      console.log(`💬 Messages loaded in ${Date.now() - startTime}ms`);
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Failed to load messages");
     } finally {
       set({ isMessagesLoading: false });
     }
@@ -57,7 +94,8 @@ export const useChatStore = create((set, get) => ({
     const authUser = useAuthStore.getState().authUser;
 
     // Helper function: Chuẩn hóa ID (ObjectId vs string)
-    const toId = (v) => typeof v === 'object' && v?._id ? String(v._id) : String(v);
+    const toId = (v) =>
+      typeof v === "object" && v?._id ? String(v._id) : String(v);
 
     // Optimistic UI Update: Tạo message tạm để hiển thị ngay
     const tempMessage = {
@@ -90,22 +128,26 @@ export const useChatStore = create((set, get) => ({
         `/messages/send/${selectedUser._id}`,
         messageData
       );
-      
+
       // Replace temp message with real message from server
       set({
         messages: (() => {
           const currentMessages = get().messages;
           // Remove temp message và add real message
-          const withoutTemp = currentMessages.filter(msg => msg._id !== tempMessage._id);
+          const withoutTemp = currentMessages.filter(
+            (msg) => msg._id !== tempMessage._id
+          );
           // Kiểm tra xem real message đã tồn tại chưa (tránh duplicate)
-          const hasRealMessage = withoutTemp.some(msg => msg._id === res.data._id);
+          const hasRealMessage = withoutTemp.some(
+            (msg) => msg._id === res.data._id
+          );
           return hasRealMessage ? withoutTemp : [...withoutTemp, res.data];
         })(),
       });
     } catch (error) {
       // Remove temp message on error
       set({
-        messages: get().messages.filter(msg => msg._id !== tempMessage._id),
+        messages: get().messages.filter((msg) => msg._id !== tempMessage._id),
       });
       toast.error(error.response?.data?.message || "Failed to send message");
     }
@@ -125,8 +167,9 @@ export const useChatStore = create((set, get) => ({
       const { authUser } = useAuthStore.getState();
 
       // Helper function: Chuẩn hóa ID (ObjectId vs string)
-      const toId = (v) => typeof v === 'object' && v?._id ? String(v._id) : String(v);
-      
+      const toId = (v) =>
+        typeof v === "object" && v?._id ? String(v._id) : String(v);
+
       const selId = toId(selectedUser?._id);
       const sId = toId(newMessage.senderId);
       const rId = toId(newMessage.receiverId);
@@ -134,27 +177,31 @@ export const useChatStore = create((set, get) => ({
 
       // Logic filtering "cứng" hơn:
       // 1. Tin nhắn phải liên quan đến user hiện tại (là sender hoặc receiver)
-      const isMessageForMe = (sId === meId || rId === meId);
-      
+      const isMessageForMe = sId === meId || rId === meId;
+
       // 2. Tin nhắn phải thuộc conversation đang mở
-      const isFromSelectedConversation = selectedUser && (sId === selId || rId === selId);
+      const isFromSelectedConversation =
+        selectedUser && (sId === selId || rId === selId);
 
       if (!selectedUser || !isMessageForMe || !isFromSelectedConversation) {
-        console.log('🚫 Message filtered out:', {
+        console.log("🚫 Message filtered out:", {
           hasSelectedUser: !!selectedUser,
           isForMe: isMessageForMe,
           isFromConversation: isFromSelectedConversation,
-          selId, sId, rId, meId
+          selId,
+          sId,
+          rId,
+          meId,
         });
         return;
       }
 
-      console.log('📨 New message accepted:', {
+      console.log("📨 New message accepted:", {
         messageId: newMessage._id,
         from: sId,
         to: rId,
         currentUser: meId,
-        selectedUser: selId
+        selectedUser: selId,
       });
 
       // Chống trùng tin (optimistic update vs server echo)
@@ -162,7 +209,7 @@ export const useChatStore = create((set, get) => ({
         messages: (() => {
           const msgs = get().messages;
           // Nếu message đã tồn tại (theo _id), không add
-          return msgs.some(m => m._id === newMessage._id)
+          return msgs.some((m) => m._id === newMessage._id)
             ? msgs
             : [...msgs, newMessage];
         })(),

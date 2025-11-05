@@ -9,14 +9,48 @@ export const useGroupStore = create((set, get) => ({
   groupMessages: [],
   isGroupsLoading: false,
   isGroupMessagesLoading: false,
+  groupsCache: null, // Cache groups data
+  groupsCacheTime: null, // Thời gian cache
 
-  getGroups: async () => {
+  getGroups: async (forceRefresh = false) => {
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+    const now = Date.now();
+
+    // Kiểm tra cache trước
+    const { groupsCache, groupsCacheTime } = get();
+    if (
+      !forceRefresh &&
+      groupsCache &&
+      groupsCacheTime &&
+      now - groupsCacheTime < CACHE_DURATION
+    ) {
+      console.log("📋 Using cached groups data");
+      set({ groups: groupsCache });
+      return;
+    }
+
     set({ isGroupsLoading: true });
+    const startTime = Date.now();
+
     try {
       const res = await axiosInstance.get("/groups");
-      set({ groups: res.data });
+      const groups = res.data;
+
+      set({
+        groups,
+        groupsCache: groups,
+        groupsCacheTime: now,
+      });
+
+      console.log(`👥 Groups loaded in ${Date.now() - startTime}ms`);
     } catch (error) {
-      toast.error(error.response?.data?.error || "Failed to fetch groups");
+      // Fallback to cache nếu có lỗi network
+      if (groupsCache) {
+        console.log("📋 Network error, using cached groups");
+        set({ groups: groupsCache });
+      } else {
+        toast.error(error.response?.data?.message || "Failed to load groups");
+      }
     } finally {
       set({ isGroupsLoading: false });
     }

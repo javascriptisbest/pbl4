@@ -27,9 +27,24 @@ const UnifiedSidebar = () => {
   } = useGroupStore();
 
   useEffect(() => {
-    getUsers();
-    getGroups();
-  }, [getUsers, getGroups]);
+    // Chỉ load khi chưa có data hoặc cache expired
+    const shouldLoadUsers = !users.length || activeTab === "contacts";
+    const shouldLoadGroups = !groups.length || activeTab === "groups";
+
+    if (shouldLoadUsers && activeTab === "contacts") {
+      getUsers(); // Sẽ dùng cache nếu còn fresh
+    }
+    if (shouldLoadGroups && activeTab === "groups") {
+      getGroups(); // Sẽ dùng cache nếu còn fresh
+    }
+  }, [activeTab, users.length, groups.length, getUsers, getGroups]);
+
+  // Separate effect cho initial load
+  useEffect(() => {
+    // Initial load - chỉ chạy 1 lần khi component mount
+    if (!users.length) getUsers();
+    if (!groups.length) getGroups();
+  }, [users.length, groups.length, getUsers, getGroups]);
 
   const filteredUsers = showOnlineOnly
     ? users.filter((user) => onlineUsers.includes(user._id))

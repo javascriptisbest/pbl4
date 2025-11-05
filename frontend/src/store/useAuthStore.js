@@ -24,14 +24,32 @@ export const useAuthStore = create((set, get) => ({
   },
 
   checkAuth: async () => {
+    const startTime = Date.now();
     try {
-      const res = await axiosInstance.get("/auth/check");
+      // Optimize: Parallel check và timeout
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Auth check timeout")), 8000)
+      );
+
+      const authPromise = axiosInstance.get("/auth/check");
+
+      const res = await Promise.race([authPromise, timeoutPromise]);
 
       set({ authUser: res.data });
       get().connectSocket();
+
+      console.log(`✅ Auth check completed in ${Date.now() - startTime}ms`);
     } catch (error) {
       console.log("Error in checkAuth:", error);
       set({ authUser: null });
+
+      // Nếu timeout hoặc network error, vẫn cho user vào offline mode
+      if (
+        error.message === "Auth check timeout" ||
+        error.code === "NETWORK_ERROR"
+      ) {
+        console.log("🔄 Running in offline mode");
+      }
     } finally {
       set({ isCheckingAuth: false });
     }
