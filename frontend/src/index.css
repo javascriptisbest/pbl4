@@ -1,3 +1,71 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Mobile Optimization */
+@layer base {
+  html {
+    /* Prevent zoom on double tap */
+    touch-action: manipulation;
+    /* Smoother scrolling */
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  body {
+    /* Prevent text selection on touch */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    
+    /* But allow text selection in input fields */
+    input, textarea {
+      -webkit-user-select: text;
+      -khtml-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
+    }
+  }
+  
+  /* Fix iOS input zoom */
+  input, textarea, select {
+    font-size: 16px;
+    border-radius: 0;
+  }
+  
+  /* Smooth scrolling for chat */
+  .chat-container {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom utilities for mobile */
+@layer utilities {
+  .touch-none {
+    touch-action: none;
+  }
+  
+  .touch-pan-x {
+    touch-action: pan-x;
+  }
+  
+  .touch-pan-y {
+    touch-action: pan-y;
+  }
+  
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Mobile-first breakpoint */
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+  
+  .desktop-only {
+    @apply hidden sm:block;
+  }
+}

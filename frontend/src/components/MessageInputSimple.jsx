@@ -284,25 +284,29 @@ const MessageInputSimple = ({ onSendMessage }) => {
           />
         </div>
 
-        {/* Text Input */}
+        {/* Text Input - Mobile optimized */}
         <input
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Type a message..."
-          className="input input-bordered flex-1"
+          className="input input-bordered flex-1 text-base" // text-base for iOS zoom prevention
+          style={{ fontSize: '16px' }} // Explicit fontSize for mobile
           disabled={media.isUploading || isRecording}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="sentences"
         />
 
-        {/* Send Button */}
+        {/* Send Button - Larger touch target on mobile */}
         <button
           type="submit"
           disabled={
             (!text.trim() && !hasMedia) || media.isUploading || isRecording
           }
-          className="btn btn-primary"
+          className="btn btn-primary min-h-[44px] min-w-[44px] sm:min-h-[48px] sm:min-w-[48px]"
         >
-          <Send className="w-5 h-5" />
+          <Send className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
       </form>
     </div>

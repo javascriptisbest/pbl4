@@ -70,38 +70,53 @@ const UnifiedSidebar = () => {
 
   return (
     <>
-      <aside className="w-72 h-full border-r border-base-300 flex flex-col flex-shrink-0">
-        {/* Header with Tab Buttons */}
-        <div className="border-b border-base-300 p-3">
-          <div className="flex gap-2">
+      <aside className="w-full h-full border-r border-base-300 flex flex-col flex-shrink-0 sm:w-72">
+        {/* Header with Tab Buttons - Mobile optimized */}
+        <div className="border-b border-base-300 p-2 sm:p-3">
+          <div className="flex gap-1 sm:gap-2">
             <button
               onClick={() => setActiveTab("contacts")}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${
                 activeTab === "contacts"
                   ? "bg-primary text-primary-content"
                   : "bg-base-200 hover:bg-base-300"
               }`}
             >
-              <MessageSquare className="w-5 h-5" />
-              <span className="font-medium">Messages</span>
+              <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="font-medium hidden xs:inline">Messages</span>
+              <span className="font-medium xs:hidden">Chat</span>
             </button>
 
             <button
               onClick={() => setActiveTab("groups")}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-colors text-sm sm:text-base ${
                 activeTab === "groups"
                   ? "bg-primary text-primary-content"
                   : "bg-base-200 hover:bg-base-300"
               }`}
             >
-              <Users className="w-5 h-5" />
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="font-medium">Groups</span>
             </button>
           </div>
 
+          {/* Create Group Button - Mobile positioning */}
+          <div className="mt-2 sm:mt-3 flex items-center justify-between">
+            {activeTab === "groups" && (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="btn btn-primary btn-sm text-xs sm:text-sm"
+                title="Create New Group"
+              >
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline ml-1">New Group</span>
+              </button>
+            )}
+          </div>
+
           {/* Actions based on active tab */}
           {activeTab === "contacts" ? (
-            <div className="mt-3 h-10 flex items-center">
+            <div className="mt-2 sm:mt-3 h-8 sm:h-10 flex items-center">
               <label className="cursor-pointer flex items-center gap-2 w-full">
                 <input
                   type="checkbox"
@@ -110,8 +125,8 @@ const UnifiedSidebar = () => {
                   className="checkbox checkbox-sm flex-shrink-0"
                 />
                 <span className="flex items-center gap-1">
-                  <span className="text-sm whitespace-nowrap">
-                    Show online only
+                  <span className="text-xs sm:text-sm whitespace-nowrap">
+                    Online only
                   </span>
                   <span className="text-xs text-base-content/60">
                     ({onlineUsers.length - 1})
@@ -145,11 +160,13 @@ const UnifiedSidebar = () => {
                     setSelectedGroup(null);
                   }}
                   className={`
-                    w-full p-3 flex items-center gap-3 rounded-lg
-                    hover:bg-base-200 transition-colors
+                    w-full p-2 sm:p-3 flex items-center gap-2 sm:gap-3 rounded-lg mb-1
+                    hover:bg-base-200 transition-all duration-200 
+                    active:bg-base-300 active:scale-[0.98] transform
+                    touch-manipulation
                     ${
                       selectedUser?._id === user._id
-                        ? "bg-primary/10 ring-2 ring-primary/30"
+                        ? "bg-primary/10 ring-1 ring-primary/30"
                         : ""
                     }
                   `}
