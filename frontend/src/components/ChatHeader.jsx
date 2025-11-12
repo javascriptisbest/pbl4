@@ -38,16 +38,16 @@ const ChatHeader = () => {
   };
 
   return (
-    <div className="p-2.5 border-b border-base-300">
+    <div className="p-2.5 border-b border-base-300 bg-base-100/80 backdrop-blur-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* Back button for mobile */}
+          {/* Enhanced Back button for mobile - More prominent */}
           <button
             onClick={() => setSelectedUser(null)}
-            className="btn btn-ghost btn-sm btn-circle md:hidden"
+            className="btn btn-ghost btn-sm btn-circle md:hidden bg-base-200/50 hover:bg-base-300 border border-base-300/50"
             title="Back to contacts"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 text-primary" />
           </button>
 
           {/* Avatar */}

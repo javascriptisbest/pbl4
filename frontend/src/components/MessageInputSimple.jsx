@@ -284,19 +284,21 @@ const MessageInputSimple = ({ onSendMessage }) => {
           />
         </div>
 
-        {/* Text Input - Mobile optimized */}
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message..."
-          className="input input-bordered flex-1 text-base" // text-base for iOS zoom prevention
-          style={{ fontSize: '16px' }} // Explicit fontSize for mobile
-          disabled={media.isUploading || isRecording}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="sentences"
-        />
+        {/* Text Input Container - Prevent overflow */}
+        <div className="flex-1 min-w-0">
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Type a message..."
+            className="input input-bordered w-full text-base min-h-[44px] focus:outline-offset-0"
+            style={{ fontSize: '16px' }}
+            disabled={media.isUploading || isRecording}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="sentences"
+          />
+        </div>
 
         {/* Send Button - Larger touch target on mobile */}
         <button
@@ -304,7 +306,7 @@ const MessageInputSimple = ({ onSendMessage }) => {
           disabled={
             (!text.trim() && !hasMedia) || media.isUploading || isRecording
           }
-          className="btn btn-primary min-h-[44px] min-w-[44px] sm:min-h-[48px] sm:min-w-[48px]"
+          className="btn btn-primary flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-[48px] sm:min-w-[48px]"
         >
           <Send className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>

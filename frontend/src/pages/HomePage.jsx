@@ -4,7 +4,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import UnifiedSidebar from "../components/UnifiedSidebar";
 import NoChatSelected from "../components/NoChatSelected";
 import UnifiedChatContainer from "../components/UnifiedChatContainer";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 
 const HomePage = () => {
   const { selectedUser, subscribeToMessages, unsubscribeFromMessages, setSelectedUser } =
@@ -77,16 +77,47 @@ const HomePage = () => {
             : 'max-w-6xl h-[calc(100vh-3rem)] rounded-xl border border-base-300/50'
         }`}>
           <div className="flex h-full overflow-hidden">
-            {/* Mobile Back Button - Enhanced Design */}
-            {isMobile && !showSidebar && (
-              <div className="absolute top-4 left-4 z-10">
-                <button
-                  onClick={handleBackToSidebar}
-                  className="bg-primary/20 backdrop-blur-md hover:bg-primary/30 p-3 rounded-full shadow-xl border border-primary/30 transition-all duration-300 hover:scale-105 active:scale-95"
-                  aria-label="Back to contacts"
-                >
-                  <ArrowLeft className="w-5 h-5 text-primary" />
-                </button>
+            {/* Mobile Back Button & Chat Info - Enhanced Design */}
+            {isMobile && !showSidebar && (selectedUser || selectedGroup) && (
+              <div className="absolute top-0 left-0 right-0 z-10 bg-base-100/95 backdrop-blur-md border-b border-base-300/50 p-3">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleBackToSidebar}
+                    className="btn btn-ghost btn-sm btn-circle bg-primary/10 hover:bg-primary/20 border border-primary/20"
+                    aria-label="Back to contacts"
+                  >
+                    <ArrowLeft className="w-4 h-4 text-primary" />
+                  </button>
+                  
+                  {/* Chat Info */}
+                  {selectedUser && (
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-full overflow-hidden">
+                        <img 
+                          src={selectedUser.profilePic || '/default-avatar.png'} 
+                          alt={selectedUser.fullName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate text-sm">{selectedUser.fullName}</div>
+                        <div className="text-xs text-base-content/60">Tap to see details</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedGroup && (
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate text-sm">{selectedGroup.name}</div>
+                        <div className="text-xs text-base-content/60">{selectedGroup.members?.length || 0} members</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -106,7 +137,9 @@ const HomePage = () => {
                 : 'flex-1 min-w-0'
             }`}>
               {selectedUser || selectedGroup ? (
-                <UnifiedChatContainer />
+                <div className={`h-full ${isMobile && !showSidebar ? 'pt-16' : ''}`}>
+                  <UnifiedChatContainer />
+                </div>
               ) : (
                 <NoChatSelected />
               )}
