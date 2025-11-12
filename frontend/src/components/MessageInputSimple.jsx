@@ -190,9 +190,9 @@ const MessageInputSimple = ({ onSendMessage }) => {
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-        {/* Media Buttons */}
-        <div className="flex gap-1">
+      <form onSubmit={handleSendMessage} className="flex items-center gap-1">
+        {/* Media Buttons - Compact */}
+        <div className="flex gap-0.5">
           {/* Hidden File Inputs */}
           <input
             ref={imageInputRef}
@@ -215,16 +215,16 @@ const MessageInputSimple = ({ onSendMessage }) => {
             onChange={handleFileSelect("file")}
           />
 
-          {/* Media Attachment Dropdown */}
+          {/* Media Attachment Dropdown - Compact */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setShowMediaMenu(!showMediaMenu)}
-              className="btn btn-ghost btn-sm"
+              className="btn btn-ghost btn-xs w-8 h-8 min-h-8 p-0"
               disabled={media.isUploading || isRecording}
-              title="Attach Media"
+              title="Attach"
             >
-              <Paperclip className="w-5 h-5" />
+              <Paperclip className="w-3.5 h-3.5" />
             </button>
 
             {showMediaMenu && (
@@ -263,20 +263,20 @@ const MessageInputSimple = ({ onSendMessage }) => {
             )}
           </div>
 
-          {/* Voice Recording Button */}
+          {/* Voice Recording Button - Compact */}
           <button
             type="button"
             onClick={isRecording ? stopRecording : startRecording}
-            className={`btn btn-ghost btn-sm ${
+            className={`btn btn-ghost btn-xs w-8 h-8 min-h-8 p-0 ${
               isRecording ? "text-error" : ""
             }`}
             disabled={media.isUploading}
-            title="Voice Message"
+            title="Voice"
           >
-            <Mic className="w-5 h-5" />
+            <Mic className="w-3.5 h-3.5" />
           </button>
 
-          {/* Emoji Picker */}
+          {/* Emoji Picker - Compact */}
           <EmojiPicker
             show={showEmojiPicker}
             onToggle={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -300,15 +300,15 @@ const MessageInputSimple = ({ onSendMessage }) => {
           />
         </div>
 
-        {/* Send Button - Larger touch target on mobile */}
+        {/* Send Button - Compact but touch-friendly */}
         <button
           type="submit"
           disabled={
             (!text.trim() && !hasMedia) || media.isUploading || isRecording
           }
-          className="btn btn-primary flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-[48px] sm:min-w-[48px]"
+          className="btn btn-primary flex-shrink-0 w-10 h-10 min-h-10 p-0"
         >
-          <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+          <Send className="w-4 h-4" />
         </button>
       </form>
     </div>
