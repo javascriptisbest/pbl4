@@ -68,22 +68,24 @@ const HomePage = () => {
   };
 
   return (
-    <div className="h-screen bg-base-200">
+    <div className="h-screen bg-gradient-to-br from-base-200 via-base-300 to-base-200">
       {/* Mobile: Full screen container, Desktop: Centered container */}
-      <div className={`flex items-center justify-center ${isMobile ? 'h-full' : 'pt-20 px-4'}`}>
-        <div className={`bg-base-100 rounded-lg shadow-cl w-full h-full ${
-          isMobile ? '' : 'max-w-6xl h-[calc(100vh-8rem)]'
+      <div className={`flex items-center justify-center ${isMobile ? 'h-full' : 'pt-6 px-4'}`}>
+        <div className={`bg-base-100 shadow-2xl backdrop-blur-sm w-full h-full ${
+          isMobile 
+            ? 'rounded-none' 
+            : 'max-w-6xl h-[calc(100vh-3rem)] rounded-xl border border-base-300/50'
         }`}>
-          <div className="flex h-full rounded-lg overflow-hidden">
-            {/* Mobile Back Button */}
+          <div className="flex h-full overflow-hidden">
+            {/* Mobile Back Button - Enhanced Design */}
             {isMobile && !showSidebar && (
               <div className="absolute top-4 left-4 z-10">
                 <button
                   onClick={handleBackToSidebar}
-                  className="bg-base-300 hover:bg-base-200 p-2 rounded-full shadow-lg transition-colors"
+                  className="bg-primary/20 backdrop-blur-md hover:bg-primary/30 p-3 rounded-full shadow-xl border border-primary/30 transition-all duration-300 hover:scale-105 active:scale-95"
                   aria-label="Back to contacts"
                 >
-                  <ArrowLeft className="w-5 h-5" />
+                  <ArrowLeft className="w-5 h-5 text-primary" />
                 </button>
               </div>
             )}
@@ -92,7 +94,7 @@ const HomePage = () => {
             <div className={`${
               isMobile 
                 ? (showSidebar ? 'block w-full' : 'hidden') 
-                : 'block w-80 flex-shrink-0'
+                : 'block w-80 flex-shrink-0 border-r border-base-300/50'
             }`}>
               <UnifiedSidebar />
             </div>
