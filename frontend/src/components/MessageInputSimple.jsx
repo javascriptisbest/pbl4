@@ -190,9 +190,9 @@ const MessageInputSimple = ({ onSendMessage }) => {
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="flex items-center gap-1">
-        {/* Media Buttons - Compact */}
-        <div className="flex gap-0.5">
+      <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+        {/* Media Buttons - Responsive sizing */}
+        <div className="flex gap-1 md:gap-2">
           {/* Hidden File Inputs */}
           <input
             ref={imageInputRef}
@@ -215,20 +215,20 @@ const MessageInputSimple = ({ onSendMessage }) => {
             onChange={handleFileSelect("file")}
           />
 
-          {/* Media Attachment Dropdown - Compact */}
+          {/* Media Attachment Dropdown - Responsive */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setShowMediaMenu(!showMediaMenu)}
-              className="btn btn-ghost btn-xs w-8 h-8 min-h-8 p-0"
+              className="btn btn-ghost btn-xs md:btn-sm w-7 h-7 md:w-auto md:h-auto min-h-7 md:min-h-8 p-0 md:p-2"
               disabled={media.isUploading || isRecording}
               title="Attach"
             >
-              <Paperclip className="w-3.5 h-3.5" />
+              <Paperclip className="w-3 h-3 md:w-4 md:h-4" />
             </button>
 
             {showMediaMenu && (
-              <div className="absolute bottom-full left-0 mb-2 bg-base-200 rounded-lg shadow-xl border border-base-300 py-1 min-w-[120px]">
+              <div className="absolute bottom-full left-0 mb-2 bg-base-200 rounded-lg shadow-xl border border-base-300 py-1 min-w-[120px] z-10">
                 <button
                   type="button"
                   onClick={() => {
@@ -263,20 +263,20 @@ const MessageInputSimple = ({ onSendMessage }) => {
             )}
           </div>
 
-          {/* Voice Recording Button - Compact */}
+          {/* Voice Recording Button - Responsive */}
           <button
             type="button"
             onClick={isRecording ? stopRecording : startRecording}
-            className={`btn btn-ghost btn-xs w-8 h-8 min-h-8 p-0 ${
+            className={`btn btn-ghost btn-xs md:btn-sm w-7 h-7 md:w-auto md:h-auto min-h-7 md:min-h-8 p-0 md:p-2 ${
               isRecording ? "text-error" : ""
             }`}
             disabled={media.isUploading}
             title="Voice"
           >
-            <Mic className="w-3.5 h-3.5" />
+            <Mic className="w-3 h-3 md:w-4 md:h-4" />
           </button>
 
-          {/* Emoji Picker - Compact */}
+          {/* Emoji Picker - Responsive */}
           <EmojiPicker
             show={showEmojiPicker}
             onToggle={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -300,15 +300,15 @@ const MessageInputSimple = ({ onSendMessage }) => {
           />
         </div>
 
-        {/* Send Button - Compact but touch-friendly */}
+        {/* Send Button - Responsive sizing */}
         <button
           type="submit"
           disabled={
             (!text.trim() && !hasMedia) || media.isUploading || isRecording
           }
-          className="btn btn-primary flex-shrink-0 w-10 h-10 min-h-10 p-0"
+          className="btn btn-primary flex-shrink-0 w-8 h-8 md:w-auto md:h-auto min-h-8 md:min-h-12 p-0 md:px-4"
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-3.5 h-3.5 md:w-4 md:h-4" />
         </button>
       </form>
     </div>

@@ -68,13 +68,13 @@ const HomePage = () => {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-base-200 via-base-300 to-base-200">
+    <div className="h-screen bg-gradient-to-br from-base-200 via-base-300 to-base-200 overflow-hidden">
       {/* Mobile: Full screen container, Desktop: Centered container */}
-      <div className={`flex items-center justify-center ${isMobile ? 'h-full' : 'pt-6 px-4'}`}>
-        <div className={`bg-base-100 shadow-2xl backdrop-blur-sm w-full h-full ${
+      <div className={`flex items-center justify-center ${isMobile ? 'h-full' : 'pt-6 px-4'} ${isMobile ? 'w-full' : ''}`}>
+        <div className={`bg-base-100 shadow-2xl backdrop-blur-sm ${
           isMobile 
-            ? 'rounded-none' 
-            : 'max-w-6xl h-[calc(100vh-3rem)] rounded-xl border border-base-300/50'
+            ? 'w-full h-full rounded-none' 
+            : 'max-w-6xl w-full h-[calc(100vh-3rem)] rounded-xl border border-base-300/50'
         }`}>
           <div className="flex h-full overflow-hidden">
             {/* Mobile Back Button & Chat Info - Enhanced Design */}
