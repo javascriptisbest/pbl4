@@ -95,7 +95,38 @@ export const sendMessage = async (req, res) => {
       fileType,
     } = req.body;
     const { id: receiverId } = req.params;
-    const senderId = req.user._id;
+    const senderId = req.user?._id;
+
+    console.log("📨 Send message request:", {
+      senderId,
+      receiverId,
+      hasUser: !!req.user,
+      userDetails: req.user ? { id: req.user._id, email: req.user.email } : null,
+      hasText: !!text,
+      hasImage: !!image,
+      hasVideo: !!video,
+      hasAudio: !!audio,
+      hasFile: !!file
+    });
+
+    // Validate authentication
+    if (!req.user || !senderId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    // Validate required fields
+    if (!receiverId) {
+      return res.status(400).json({ error: "Receiver ID is required" });
+    }
+
+    if (!text && !image && !video && !audio && !file) {
+      return res.status(400).json({ error: "Message content is required" });
+    }
+
+    // Validate MongoDB ObjectId format
+    if (!receiverId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ error: "Invalid receiver ID format" });
+    }
 
     let imageUrl,
       videoUrl,
@@ -178,6 +209,18 @@ export const sendMessage = async (req, res) => {
       console.log("File uploaded successfully:", fileUrl);
     }
 
+    console.log("💾 Creating message with data:", {
+      senderId,
+      receiverId,
+      text,
+      messageType: "direct",
+      hasImage: !!imageUrl,
+      hasVideo: !!videoUrl,
+      hasAudio: !!audioUrl,
+      hasFile: !!fileUrl,
+      mediaType
+    });
+
     const newMessage = new Message({
       senderId,
       receiverId,
@@ -190,20 +233,25 @@ export const sendMessage = async (req, res) => {
       fileName,
       fileSize,
       fileType,
+      messageType: "direct", // Explicitly set messageType
       mediaType,
     });
 
+    console.log("💾 Saving message to database...");
     await newMessage.save();
+    console.log("✅ Message saved successfully:", newMessage._id);
 
     // Populate sender info before emitting
+    console.log("👤 Populating sender info...");
     await newMessage.populate("senderId", "fullName profilePic");
+    console.log("✅ Sender info populated");
 
     const receiverSocketId = getReceiverSocketId(receiverId);
     console.log("🔍 Broadcasting message:", {
       receiverId,
       receiverSocketId,
       messageId: newMessage._id,
-      allUsers: Object.keys(require("../lib/socket.js").userSocketMap || {}),
+      timestamp: new Date().toISOString()
     });
 
     if (receiverSocketId) {
@@ -215,8 +263,12 @@ export const sendMessage = async (req, res) => {
 
     res.status(201).json(newMessage);
   } catch (error) {
-    console.log("Error in sendMessage controller: ", error.message);
-    console.log("Full error:", error); // Log full error for debugging
+    console.error("❌ Error in sendMessage controller:");
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    console.error("Request body keys:", Object.keys(req.body));
+    console.error("Request params:", req.params);
+    console.error("User ID:", req.user?._id);
 
     // Handle specific error types
     if (error.message?.includes("File size too large")) {
@@ -232,7 +284,11 @@ export const sendMessage = async (req, res) => {
         .status(400)
         .json({ error: "Invalid video format. Please use MP4, AVI, or MOV." });
     } else {
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ 
+        error: "Internal server error",
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 };

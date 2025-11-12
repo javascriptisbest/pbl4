@@ -26,9 +26,8 @@ const userSchema = new mongoose.Schema(
 
 // ===== DATABASE INDEXES FOR PERFORMANCE =====
 
-// 1. Index cho email lookup (login, signup)
-// MongoDB tự tạo index cho unique fields, nhưng explicit is better
-userSchema.index({ email: 1 });
+// 1. Email đã có unique: true nên MongoDB tự tạo index rồi
+// userSchema.index({ email: 1 }); // ❌ DUPLICATE - removed
 
 // 2. Index cho search by name (nếu có search feature)
 userSchema.index({ fullName: "text" });

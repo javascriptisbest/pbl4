@@ -81,6 +81,14 @@ const App = () => {
           });
         }}
       />
+
+      {/* Performance Dashboard - only show in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <PerformanceDashboard 
+          isOpen={showPerfDashboard}
+          onToggle={() => setShowPerfDashboard(!showPerfDashboard)}
+        />
+      )}
     </div>
   );
 };

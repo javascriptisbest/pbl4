@@ -135,7 +135,7 @@ messageSchema.index({ isDeleted: 1 });
 // 4. Compound index cho pagination
 // Sort by createdAt khi query messages
 messageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
-messageSchema.index({ groupId: 1, createdAt: -1 });
+// messageSchema.index({ groupId: 1, createdAt: -1 }); // ❌ DUPLICATE - removed
 
 // 5. Index cho messageType (nếu cần filter by type)
 messageSchema.index({ messageType: 1 });
