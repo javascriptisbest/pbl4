@@ -266,6 +266,33 @@ app.use("/api/messages", messageRoutes); // No limiter
 app.use("/api/images", uploadLimiter, imageRoutes);
 app.use("/api/groups", groupRoutes);
 
+// ===== DEBUG MIDDLEWARE =====
+app.use((req, res, next) => {
+  console.log(`🔍 ${req.method} ${req.originalUrl} - ${new Date().toISOString()}`);
+  next();
+});
+
+// ===== 404 HANDLER =====
+app.use("/api/*", (req, res) => {
+  console.log(`❌ 404 API Route not found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ 
+    error: "API route not found",
+    method: req.method,
+    path: req.originalUrl,
+    availableRoutes: [
+      "GET /api/health",
+      "POST /api/auth/login",
+      "POST /api/auth/signup", 
+      "GET /api/auth/check",
+      "POST /api/auth/logout",
+      "GET /api/groups",
+      "POST /api/groups",
+      "GET /api/messages",
+      "POST /api/messages"
+    ]
+  });
+});
+
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
