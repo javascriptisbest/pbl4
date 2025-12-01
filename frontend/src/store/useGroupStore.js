@@ -13,11 +13,18 @@ export const useGroupStore = create((set, get) => ({
   groupsCacheTime: null, // Thời gian cache
 
   getGroups: async (forceRefresh = false) => {
-    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+    const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes cache (shorter)
     const now = Date.now();
 
     // Kiểm tra cache trước
-    const { groupsCache, groupsCacheTime } = get();
+    const { groupsCache, groupsCacheTime, isGroupsLoading } = get();
+    
+    // Prevent duplicate loading
+    if (isGroupsLoading && !forceRefresh) {
+      console.log("⏳ Groups already loading, skipping duplicate request");
+      return;
+    }
+    
     if (
       !forceRefresh &&
       groupsCache &&

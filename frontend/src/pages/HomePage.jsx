@@ -14,8 +14,8 @@ import { io } from "socket.io-client";
 import toast from "react-hot-toast";
 
 const HomePage = () => {
-  const { selectedUser } = useChatStore();
-  const { selectedGroup } = useGroupStore();
+  const { selectedUser, getUsers, users } = useChatStore();
+  const { selectedGroup, getGroups, groups } = useGroupStore();
   const { authUser } = useAuthStore();
 
   // Simple voice call modal state
@@ -29,6 +29,23 @@ const HomePage = () => {
 
   useEffect(() => {
     if (!authUser) return;
+
+    // Preload users and groups for instant sidebar switching
+    const preloadData = measureAsync("preloadChatData", async () => {
+      console.log("🚀 HomePage: Preloading chat data...");
+      
+      // Load users if not already loaded  
+      if (!users.length) {
+        console.log("👥 Loading users...");
+        await getUsers();
+      }
+      
+      // Load groups if not already loaded
+      if (!groups.length) {
+        console.log("👥 Loading groups...");
+        await getGroups();
+      }
+    });
 
     // Measure voice call setup performance
     const setupVoiceCall = measureAsync("voiceCallSetup", async () => {
@@ -135,6 +152,9 @@ const HomePage = () => {
       };
     });
 
+    // Run preload in parallel
+    preloadData();
+
     // Cleanup
     return () => {
       console.log("🧹 Cleaning up voice call system");
@@ -143,7 +163,7 @@ const HomePage = () => {
         window.voiceCallManager = null;
       }
     };
-  }, [authUser, selectedUser]);
+  }, [authUser, selectedUser, getUsers, getGroups, users.length, groups.length]);
 
   const handleCloseCallModal = () => {
     console.log("❌ Closing call modal");
