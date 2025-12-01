@@ -12,6 +12,8 @@ const getBackendURL = () => {
 
   if (hostname === "localhost" || hostname === "127.0.0.1") {
     return "http://localhost:5002";
+  } else if (hostname === "pbl4-one.vercel.app") {
+    return "https://pbl4-jecm.onrender.com";
   } else if (hostname.includes("vercel.app")) {
     return "https://pbl4-jecm.onrender.com";
   } else if (hostname.includes("onrender.com")) {
