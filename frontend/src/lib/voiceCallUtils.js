@@ -1,7 +1,7 @@
 /**
  * WebRTC Voice Call Manager
  * Xử lý peer-to-peer voice communication
- * 
+ *
  * WebRTC Flow:
  * 1. Caller tạo offer (SDP)
  * 2. Gửi offer qua Signaling Server (Socket.IO) đến Callee
@@ -12,7 +12,7 @@
 
 export class VoiceCallManager {
   constructor(socket, userId) {
-    console.log('Initializing VoiceCallManager for user:', userId);
+    console.log("Initializing VoiceCallManager for user:", userId);
     this.socket = socket; // Socket.IO connection (dùng làm signaling server)
     this.userId = userId; // ID của user hiện tại
     this.peerConnection = null; // RTCPeerConnection object

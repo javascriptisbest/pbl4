@@ -39,9 +39,9 @@ const Sidebar = () => {
 
   // Lọc users dựa trên online status và search
   const filteredUsers = safeUsers.filter((user) => {
-    const matchesSearch = user?.fullName
-      ?.toLowerCase()
-      ?.includes(searchQuery.toLowerCase()) || false;
+    const matchesSearch =
+      user?.fullName?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
+      false;
     const matchesOnlineFilter = showOnlineOnly
       ? safeOnlineUsers.includes(user?._id)
       : true;
@@ -52,38 +52,41 @@ const Sidebar = () => {
 
   if (showSkeleton) {
     return (
-      <aside 
+      <aside
         className="h-full w-80 border-r flex flex-col"
-        style={{ 
-          background: 'var(--bg-secondary)', 
-          borderColor: 'var(--border-primary)' 
+        style={{
+          background: "var(--bg-secondary)",
+          borderColor: "var(--border-primary)",
         }}
       >
-        <div className="p-4 border-b" style={{ borderColor: 'var(--border-primary)' }}>
-          <div 
+        <div
+          className="p-4 border-b"
+          style={{ borderColor: "var(--border-primary)" }}
+        >
+          <div
             className="animate-pulse h-10 rounded-lg mb-3"
-            style={{ background: 'var(--bg-accent)' }}
+            style={{ background: "var(--bg-accent)" }}
           ></div>
-          <div 
+          <div
             className="animate-pulse h-8 rounded-lg"
-            style={{ background: 'var(--bg-accent)' }}
+            style={{ background: "var(--bg-accent)" }}
           ></div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="flex items-center space-x-3 animate-pulse">
-              <div 
+              <div
                 className="w-12 h-12 rounded-full"
-                style={{ background: 'var(--bg-accent)' }}
+                style={{ background: "var(--bg-accent)" }}
               ></div>
               <div className="flex-1 space-y-2">
-                <div 
+                <div
                   className="h-4 rounded w-3/4"
-                  style={{ background: 'var(--bg-accent)' }}
+                  style={{ background: "var(--bg-accent)" }}
                 ></div>
-                <div 
+                <div
                   className="h-3 rounded w-1/2"
-                  style={{ background: 'var(--bg-accent)' }}
+                  style={{ background: "var(--bg-accent)" }}
                 ></div>
               </div>
             </div>
@@ -94,26 +97,26 @@ const Sidebar = () => {
   }
 
   return (
-    <aside 
-      className="h-full w-80 flex-shrink-0 flex flex-col border-r border-base-300"
-    >
+    <aside className="h-full w-80 flex-shrink-0 flex flex-col border-r border-base-300">
       {/* Tab Switcher */}
-      <div 
-        className="p-2 space-y-3"
-      >
-        <div 
+      <div className="p-2 space-y-3">
+        <div
           className="flex rounded-lg p-1"
-          style={{ 
-            background: 'var(--bg-accent)'
+          style={{
+            background: "var(--bg-accent)",
           }}
         >
           <button
             onClick={() => setActiveTab("contacts")}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-all duration-200 text-sm font-medium"
             style={{
-              background: activeTab === "contacts" ? 'var(--accent-primary)' : 'transparent',
-              color: activeTab === "contacts" ? '#ffffff' : 'var(--accent-primary)',
-              boxShadow: activeTab === "contacts" ? 'var(--shadow-sm)' : 'none'
+              background:
+                activeTab === "contacts"
+                  ? "var(--accent-primary)"
+                  : "transparent",
+              color:
+                activeTab === "contacts" ? "#ffffff" : "var(--accent-primary)",
+              boxShadow: activeTab === "contacts" ? "var(--shadow-sm)" : "none",
             }}
           >
             <MessageSquare className="w-4 h-4" />
@@ -123,9 +126,13 @@ const Sidebar = () => {
             onClick={() => setActiveTab("groups")}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-all duration-200 text-sm font-medium"
             style={{
-              background: activeTab === "groups" ? 'var(--accent-primary)' : 'transparent',
-              color: activeTab === "groups" ? '#ffffff' : 'var(--accent-primary)',
-              boxShadow: activeTab === "groups" ? 'var(--shadow-sm)' : 'none'
+              background:
+                activeTab === "groups"
+                  ? "var(--accent-primary)"
+                  : "transparent",
+              color:
+                activeTab === "groups" ? "#ffffff" : "var(--accent-primary)",
+              boxShadow: activeTab === "groups" ? "var(--shadow-sm)" : "none",
             }}
           >
             <Users className="w-4 h-4" />
@@ -135,9 +142,9 @@ const Sidebar = () => {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search 
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" 
-            style={{ color: 'var(--accent-primary)' }}
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+            style={{ color: "var(--accent-primary)" }}
           />
           <input
             type="text"
@@ -148,8 +155,8 @@ const Sidebar = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-3 rounded-lg focus:outline-none transition-all duration-200"
             style={{
-              backgroundColor: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
+              backgroundColor: "var(--bg-secondary)",
+              color: "var(--text-primary)",
             }}
           />
         </div>
@@ -157,11 +164,20 @@ const Sidebar = () => {
         {/* Controls based on active tab */}
         {activeTab === "contacts" ? (
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-              <Users className="w-4 h-4" style={{ color: 'var(--accent-primary)' }} />
+            <div
+              className="flex items-center space-x-2 text-sm"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              <Users
+                className="w-4 h-4"
+                style={{ color: "var(--accent-primary)" }}
+              />
               <span>{safeUsers.length} người</span>
               {showOnlineOnly && (
-                <span style={{ color: 'var(--accent-primary)' }} className="font-medium">
+                <span
+                  style={{ color: "var(--accent-primary)" }}
+                  className="font-medium"
+                >
                   ({safeOnlineUsers.length} đang online)
                 </span>
               )}
@@ -171,8 +187,10 @@ const Sidebar = () => {
               onClick={() => setShowOnlineOnly(!showOnlineOnly)}
               className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
               style={{
-                backgroundColor: showOnlineOnly ? 'var(--accent-primary)' : 'var(--bg-accent)',
-                color: showOnlineOnly ? '#ffffff' : 'var(--accent-primary)'
+                backgroundColor: showOnlineOnly
+                  ? "var(--accent-primary)"
+                  : "var(--bg-accent)",
+                color: showOnlineOnly ? "#ffffff" : "var(--accent-primary)",
               }}
             >
               <UserCheck className="w-3 h-3" />
@@ -181,7 +199,10 @@ const Sidebar = () => {
           </div>
         ) : (
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <div
+              className="flex items-center space-x-2 text-sm"
+              style={{ color: "var(--text-secondary)" }}
+            >
               <Users className="w-4 h-4" />
               <span>{safeGroups.length} nhóm</span>
             </div>
@@ -190,12 +211,12 @@ const Sidebar = () => {
               onClick={() => setIsCreateModalOpen(true)}
               className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
               style={{
-                background: 'var(--bg-accent)',
-                color: 'var(--accent-primary)',
-                ':hover': {
-                  background: 'var(--accent-primary)',
-                  color: 'white'
-                }
+                background: "var(--bg-accent)",
+                color: "var(--accent-primary)",
+                ":hover": {
+                  background: "var(--accent-primary)",
+                  color: "white",
+                },
               }}
             >
               <Plus className="w-3 h-3" />
@@ -219,14 +240,17 @@ const Sidebar = () => {
                 }}
                 className="w-full p-2 flex items-center space-x-3 transition-colors duration-200 rounded-lg mx-1"
                 style={{
-                  backgroundColor: selectedUser?._id === user._id ? 'var(--bg-accent)' : 'transparent',
-                  color: 'var(--text-primary)'
+                  backgroundColor:
+                    selectedUser?._id === user._id
+                      ? "var(--bg-accent)"
+                      : "transparent",
+                  color: "var(--text-primary)",
                 }}
               >
                 <div className="relative">
-                  <div 
+                  <div
                     className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium shadow-sm transition-all duration-300"
-                    style={{ backgroundColor: 'var(--accent-primary)' }}
+                    style={{ backgroundColor: "var(--accent-primary)" }}
                   >
                     {user.profilePic ? (
                       <img
@@ -246,15 +270,15 @@ const Sidebar = () => {
                 </div>
 
                 <div className="flex-1 text-left">
-                  <h3 
+                  <h3
                     className="font-semibold text-sm"
-                    style={{ color: 'var(--text-primary)' }}
+                    style={{ color: "var(--text-primary)" }}
                   >
                     {user.fullName}
                   </h3>
-                  <p 
+                  <p
                     className="text-xs mt-1"
-                    style={{ color: 'var(--text-secondary)' }}
+                    style={{ color: "var(--text-secondary)" }}
                   >
                     {safeOnlineUsers.includes(user._id)
                       ? "Đang hoạt động"
@@ -299,13 +323,16 @@ const Sidebar = () => {
                   }}
                   className="w-full p-2 flex items-center space-x-3 transition-colors duration-200 rounded-lg mx-1"
                   style={{
-                    backgroundColor: selectedGroup?._id === group._id ? 'var(--bg-accent)' : 'transparent'
+                    backgroundColor:
+                      selectedGroup?._id === group._id
+                        ? "var(--bg-accent)"
+                        : "transparent",
                   }}
                 >
                   <div className="relative">
-                    <div 
+                    <div
                       className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium shadow-sm transition-all duration-300"
-                      style={{ backgroundColor: 'var(--accent-secondary)' }}
+                      style={{ backgroundColor: "var(--accent-secondary)" }}
                     >
                       {group.avatar ? (
                         <img
@@ -323,15 +350,15 @@ const Sidebar = () => {
                   </div>
 
                   <div className="flex-1 text-left">
-                    <h3 
+                    <h3
                       className="font-semibold text-sm"
-                      style={{ color: 'var(--text-primary)' }}
+                      style={{ color: "var(--text-primary)" }}
                     >
                       {group.name}
                     </h3>
-                    <p 
+                    <p
                       className="text-xs mt-1"
-                      style={{ color: 'var(--text-secondary)' }}
+                      style={{ color: "var(--text-secondary)" }}
                     >
                       {group.lastMessage
                         ? group.lastMessage.text ||

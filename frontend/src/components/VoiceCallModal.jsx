@@ -154,41 +154,38 @@ const VoiceCallModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div 
+      <div
         className="rounded-xl p-6 w-80 shadow-xl"
-        style={{ background: 'var(--bg-secondary)' }}
+        style={{ background: "var(--bg-secondary)" }}
       >
         {/* Remote audio element - hidden but functional */}
         <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
 
         {/* Call Header */}
         <div className="text-center mb-6">
-          <div 
+          <div
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: 'var(--accent-primary)' }}
+            style={{ background: "var(--accent-primary)" }}
           >
             <Phone className="w-10 h-10 text-white" />
           </div>
 
-          <h2 
+          <h2
             className="text-xl font-bold mb-2"
-            style={{ color: 'var(--text-primary)' }}
+            style={{ color: "var(--text-primary)" }}
           >
             {isIncoming
               ? `${callerName || "Unknown"} is calling...`
               : `Calling ${callerName || "User"}...`}
           </h2>
 
-          <div 
-            className="text-sm"
-            style={{ color: 'var(--text-secondary)' }}
-          >
+          <div className="text-sm" style={{ color: "var(--text-secondary)" }}>
             {isConnected ? (
-              <span style={{ color: 'var(--accent-primary)' }}>
+              <span style={{ color: "var(--accent-primary)" }}>
                 Connected • {formatTime(callDuration)}
               </span>
             ) : (
-              <span style={{ color: 'var(--text-muted)' }}>
+              <span style={{ color: "var(--text-muted)" }}>
                 {connectionStatus === "connecting"
                   ? "Connecting..."
                   : "Waiting..."}
@@ -205,7 +202,7 @@ const VoiceCallModal = ({
               <button
                 onClick={handleAnswer}
                 className="w-14 h-14 rounded-full flex items-center justify-center transition-all"
-                style={{ background: 'var(--accent-primary)' }}
+                style={{ background: "var(--accent-primary)" }}
                 title="Answer call"
               >
                 <Phone className="w-6 h-6 text-white" />
@@ -213,7 +210,7 @@ const VoiceCallModal = ({
               <button
                 onClick={handleReject}
                 className="w-14 h-14 rounded-full flex items-center justify-center transition-all"
-                style={{ background: 'var(--message-sent)' }}
+                style={{ background: "var(--message-sent)" }}
                 title="Reject call"
               >
                 <PhoneOff className="w-6 h-6 text-white" />
@@ -225,9 +222,11 @@ const VoiceCallModal = ({
               <button
                 onClick={toggleMute}
                 className="w-12 h-12 rounded-full flex items-center justify-center transition-all"
-                style={{ 
-                  background: isMuted ? 'var(--message-sent)' : 'var(--bg-accent)',
-                  color: isMuted ? '#ffffff' : 'var(--text-secondary)'
+                style={{
+                  background: isMuted
+                    ? "var(--message-sent)"
+                    : "var(--bg-accent)",
+                  color: isMuted ? "#ffffff" : "var(--text-secondary)",
                 }}
                 title={isMuted ? "Unmute" : "Mute"}
               >
@@ -241,7 +240,7 @@ const VoiceCallModal = ({
               <button
                 onClick={handleEndCall}
                 className="w-14 h-14 rounded-full flex items-center justify-center transition-all"
-                style={{ background: 'var(--message-sent)' }}
+                style={{ background: "var(--message-sent)" }}
                 title="End call"
               >
                 <PhoneOff className="w-6 h-6 text-white" />
@@ -249,9 +248,9 @@ const VoiceCallModal = ({
 
               <button
                 className="w-12 h-12 rounded-full flex items-center justify-center transition-all"
-                style={{ 
-                  background: 'var(--bg-accent)',
-                  color: 'var(--text-secondary)'
+                style={{
+                  background: "var(--bg-accent)",
+                  color: "var(--text-secondary)",
                 }}
                 title="Speaker"
                 disabled
@@ -263,24 +262,26 @@ const VoiceCallModal = ({
         </div>
 
         {/* Connection Status */}
-        <div 
+        <div
           className="mt-4 text-center text-xs"
-          style={{ color: 'var(--text-muted)' }}
+          style={{ color: "var(--text-muted)" }}
         >
           {connectionStatus === "connecting" && (
             <div className="flex items-center justify-center gap-2">
-              <div 
+              <div
                 className="w-3 h-3 rounded-full animate-spin border-2 border-t-transparent"
-                style={{ borderColor: 'var(--accent-primary)' }}
+                style={{ borderColor: "var(--accent-primary)" }}
               ></div>
               <span>Establishing connection...</span>
             </div>
           )}
           {connectionStatus === "connected" && (
-            <span style={{ color: 'var(--accent-primary)' }}>🟢 Voice call active</span>
+            <span style={{ color: "var(--accent-primary)" }}>
+              🟢 Voice call active
+            </span>
           )}
           {connectionStatus === "disconnected" && (
-            <span style={{ color: 'var(--message-sent)' }}>Disconnected</span>
+            <span style={{ color: "var(--message-sent)" }}>Disconnected</span>
           )}
         </div>
       </div>

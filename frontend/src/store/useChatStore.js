@@ -80,7 +80,7 @@ export const useChatStore = create((set, get) => ({
 
       console.log(`👥 Users loaded in ${Date.now() - startTime}ms`);
     } catch (error) {
-      console.error('Error loading users:', error);
+      console.error("Error loading users:", error);
       // Fallback to cache nếu có lỗi network
       if (usersCache && Array.isArray(usersCache)) {
         console.log("📋 Network error, using cached users");

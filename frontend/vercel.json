@@ -13,12 +13,5 @@
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "env": {
-    "VITE_BACKEND_URL": "https://pbl4-jecm.onrender.com/api",
-    "VITE_SOCKET_URL": "https://pbl4-jecm.onrender.com",
-    "VERCEL_DOMAIN": "pbl4-one.vercel.app",
-    "VERCEL_GIT_DOMAIN": "pbl4-git-master-minhs-projects-0e5f2d90.vercel.app",
-    "VERCEL_PREVIEW_DOMAIN": "pbl4-8oarlfzrf-minhs-projects-0e5f2d90.vercel.app"
-  }
+  ]
 }

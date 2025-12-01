@@ -26,16 +26,19 @@ const App = () => {
 
   if (isCheckingAuth && !authUser)
     return (
-      <div 
+      <div
         className="min-h-screen flex items-center justify-center"
-        style={{ background: 'var(--bg-primary)' }}
+        style={{ background: "var(--bg-primary)" }}
       >
         <div className="flex flex-col items-center space-y-4">
-          <div 
+          <div
             className="animate-spin rounded-full h-8 w-8 border-2 border-t-transparent"
-            style={{ borderColor: 'var(--accent-primary)', borderTopColor: 'transparent' }}
+            style={{
+              borderColor: "var(--accent-primary)",
+              borderTopColor: "transparent",
+            }}
           ></div>
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
             Đang tải...
           </p>
         </div>
@@ -43,9 +46,9 @@ const App = () => {
     );
 
   return (
-    <div 
+    <div
       className="h-screen overflow-hidden"
-      style={{ background: 'var(--bg-primary)' }}
+      style={{ background: "var(--bg-primary)" }}
     >
       <Navbar />
 

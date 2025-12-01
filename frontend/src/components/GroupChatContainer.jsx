@@ -102,9 +102,7 @@ const GroupChatContainer = () => {
       <div className="flex-1 flex items-center justify-center min-w-0">
         <div className="text-center">
           <Users className="w-16 h-16 mx-auto mb-4 text-base-content/50" />
-          <h3 className="text-xl font-semibold mb-2">
-            Chọn một nhóm
-          </h3>
+          <h3 className="text-xl font-semibold mb-2">Chọn một nhóm</h3>
           <p className="text-base-content/70">
             Chọn một nhóm từ sidebar để bắt đầu trò chuyện
           </p>
@@ -140,9 +138,9 @@ const GroupChatContainer = () => {
                 }`}
               >
                 {/* Avatar */}
-                <div 
+                <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium shadow-sm flex-shrink-0 transition-all duration-300"
-                  style={{ backgroundColor: 'var(--accent-primary)' }}
+                  style={{ backgroundColor: "var(--accent-primary)" }}
                 >
                   {isMyMessage ? (
                     authUser?.profilePic ? (
@@ -191,14 +189,18 @@ const GroupChatContainer = () => {
                   {message.text && (
                     <div
                       className={`px-4 py-3 rounded-2xl shadow-sm max-w-xs break-words ${
-                        isMyMessage
-                          ? "rounded-br-md"
-                          : "rounded-bl-md border"
+                        isMyMessage ? "rounded-br-md" : "rounded-bl-md border"
                       }`}
                       style={{
-                        background: isMyMessage ? 'var(--message-sent)' : 'var(--message-received)',
-                        color: isMyMessage ? 'var(--message-text-sent)' : 'var(--message-text-received)',
-                        borderColor: !isMyMessage ? 'var(--border-primary)' : 'none'
+                        background: isMyMessage
+                          ? "var(--message-sent)"
+                          : "var(--message-received)",
+                        color: isMyMessage
+                          ? "var(--message-text-sent)"
+                          : "var(--message-text-received)",
+                        borderColor: !isMyMessage
+                          ? "var(--border-primary)"
+                          : "none",
                       }}
                     >
                       <p className="text-sm leading-relaxed">{message.text}</p>
@@ -351,18 +353,18 @@ const GroupChatHeader = () => {
       .length || 0;
 
   return (
-    <div 
+    <div
       className="border-b p-3"
-      style={{ 
-        background: 'var(--bg-secondary)', 
-        borderColor: 'var(--border-primary)' 
+      style={{
+        background: "var(--bg-secondary)",
+        borderColor: "var(--border-primary)",
       }}
     >
       <div className="flex items-center space-x-3">
         {/* Group Avatar */}
-        <div 
+        <div
           className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm transition-all duration-300"
-          style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+          style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}
         >
           {selectedGroup.avatar ? (
             <img
@@ -378,9 +380,9 @@ const GroupChatHeader = () => {
         {/* Group Info */}
         <div className="flex-1">
           <div className="flex items-center space-x-2">
-            <h3 
+            <h3
               className="font-semibold text-sm"
-              style={{ color: 'var(--text-primary)' }}
+              style={{ color: "var(--text-primary)" }}
             >
               {selectedGroup.name}
             </h3>
@@ -391,9 +393,9 @@ const GroupChatHeader = () => {
               />
             )}
           </div>
-          <div 
+          <div
             className="flex items-center space-x-4 text-xs"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: "var(--text-secondary)" }}
           >
             <div className="flex items-center space-x-1">
               <Users2 className="w-3 h-3" />

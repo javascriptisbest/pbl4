@@ -7,10 +7,10 @@
 export function debounceAsync(func, delay) {
   let timeoutId;
   let lastPromise;
-  
-  return function(...args) {
+
+  return function (...args) {
     clearTimeout(timeoutId);
-    
+
     return new Promise((resolve, reject) => {
       timeoutId = setTimeout(async () => {
         try {
@@ -31,12 +31,12 @@ export function debounceAsync(func, delay) {
 export function throttleAsync(func, limit) {
   let inThrottle;
   let lastResult;
-  
-  return async function(...args) {
+
+  return async function (...args) {
     if (!inThrottle) {
       inThrottle = true;
       lastResult = await func.apply(this, args);
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => (inThrottle = false), limit);
     }
     return lastResult;
   };
@@ -53,34 +53,34 @@ export class AsyncBatcher {
     this.queue = [];
     this.processing = false;
   }
-  
+
   async add(operation) {
     return new Promise((resolve, reject) => {
       this.queue.push({ operation, resolve, reject });
-      
+
       if (!this.processing) {
         this.processBatch();
       }
     });
   }
-  
+
   async processBatch() {
     this.processing = true;
-    
+
     while (this.queue.length > 0) {
       const batch = this.queue.splice(0, this.batchSize);
-      
+
       try {
         // Execute batch operations in parallel
         const results = await Promise.allSettled(
           batch.map(({ operation }) => operation())
         );
-        
+
         // Resolve/reject each promise based on result
         results.forEach((result, index) => {
           const { resolve, reject } = batch[index];
-          
-          if (result.status === 'fulfilled') {
+
+          if (result.status === "fulfilled") {
             resolve(result.value);
           } else {
             reject(result.reason);
@@ -90,13 +90,13 @@ export class AsyncBatcher {
         // Reject all promises in case of unexpected error
         batch.forEach(({ reject }) => reject(error));
       }
-      
+
       // Small delay between batches
       if (this.queue.length > 0) {
-        await new Promise(resolve => setTimeout(resolve, this.delay));
+        await new Promise((resolve) => setTimeout(resolve, this.delay));
       }
     }
-    
+
     this.processing = false;
   }
 }
@@ -107,21 +107,21 @@ export class AsyncBatcher {
 export async function parallelLimit(operations, limit = 5) {
   const results = [];
   const executing = [];
-  
+
   for (const operation of operations) {
-    const promise = Promise.resolve(operation()).then(result => {
+    const promise = Promise.resolve(operation()).then((result) => {
       executing.splice(executing.indexOf(promise), 1);
       return result;
     });
-    
+
     results.push(promise);
     executing.push(promise);
-    
+
     if (executing.length >= limit) {
       await Promise.race(executing);
     }
   }
-  
+
   return Promise.all(results);
 }
 
@@ -130,20 +130,20 @@ export async function parallelLimit(operations, limit = 5) {
  */
 export async function retryAsync(operation, maxRetries = 3, baseDelay = 1000) {
   let lastError;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
     } catch (error) {
       lastError = error;
-      
+
       if (attempt === maxRetries) {
         throw lastError;
       }
-      
+
       // Exponential backoff
       const delay = baseDelay * Math.pow(2, attempt);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 }
@@ -152,31 +152,32 @@ export async function retryAsync(operation, maxRetries = 3, baseDelay = 1000) {
  * Cache async operation results
  */
 export class AsyncCache {
-  constructor(ttl = 60000) { // 1 minute default TTL
+  constructor(ttl = 60000) {
+    // 1 minute default TTL
     this.cache = new Map();
     this.ttl = ttl;
   }
-  
+
   async get(key, factory) {
     const cached = this.cache.get(key);
-    
+
     if (cached && Date.now() - cached.timestamp < this.ttl) {
       return cached.value;
     }
-    
+
     const value = await factory();
     this.cache.set(key, {
       value,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
-    
+
     return value;
   }
-  
+
   clear() {
     this.cache.clear();
   }
-  
+
   delete(key) {
     this.cache.delete(key);
   }
@@ -184,5 +185,5 @@ export class AsyncCache {
 
 // Global instances
 export const messageBatcher = new AsyncBatcher(20, 50); // Batch messages
-export const imageBatcher = new AsyncBatcher(5, 200);   // Batch image operations
-export const apiCache = new AsyncCache(30000);          // 30s API cache
+export const imageBatcher = new AsyncBatcher(5, 200); // Batch image operations
+export const apiCache = new AsyncCache(30000); // 30s API cache

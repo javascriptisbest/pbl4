@@ -122,9 +122,7 @@ const MessageInputSimple = ({ onSendMessage }) => {
     media.audioPreview;
 
   return (
-    <div 
-      className="p-2 border-t border-base-300"
-    >
+    <div className="p-2 border-t border-base-300">
       {/* Media Previews */}
       {hasMedia && (
         <div className="mb-3 flex flex-wrap gap-2">
@@ -224,8 +222,8 @@ const MessageInputSimple = ({ onSendMessage }) => {
               onClick={() => setShowMediaMenu(!showMediaMenu)}
               className="w-7 h-7 md:w-auto md:h-auto min-h-7 md:min-h-8 p-0 md:p-2 transition-all rounded-lg"
               style={{
-                backgroundColor: 'var(--bg-accent)',
-                color: 'var(--accent-primary)'
+                backgroundColor: "var(--bg-accent)",
+                color: "var(--accent-primary)",
               }}
               disabled={media.isUploading || isRecording}
               title="Attach"
@@ -275,8 +273,10 @@ const MessageInputSimple = ({ onSendMessage }) => {
             onClick={isRecording ? stopRecording : startRecording}
             className="w-7 h-7 md:w-auto md:h-auto min-h-7 md:min-h-8 p-0 md:p-2 transition-all rounded-lg border"
             style={{
-              backgroundColor: isRecording ? 'var(--message-sent)' : 'var(--bg-accent)',
-              color: isRecording ? '#ffffff' : 'var(--accent-primary)'
+              backgroundColor: isRecording
+                ? "var(--message-sent)"
+                : "var(--bg-accent)",
+              color: isRecording ? "#ffffff" : "var(--accent-primary)",
             }}
             disabled={media.isUploading}
             title="Voice"
@@ -301,8 +301,8 @@ const MessageInputSimple = ({ onSendMessage }) => {
             placeholder="Type a message..."
             className="w-full text-base min-h-[44px] focus:outline-none rounded-2xl transition-all px-4 py-2"
             style={{
-              backgroundColor: 'var(--bg-secondary)',
-              color: 'var(--text-primary)'
+              backgroundColor: "var(--bg-secondary)",
+              color: "var(--text-primary)",
             }}
             disabled={media.isUploading || isRecording}
             autoComplete="off"
@@ -319,8 +319,8 @@ const MessageInputSimple = ({ onSendMessage }) => {
           }
           className="flex-shrink-0 w-8 h-8 md:w-auto md:h-auto min-h-8 md:min-h-12 p-0 md:px-4 transition-all rounded-2xl"
           style={{
-            backgroundColor: 'var(--accent-primary)',
-            color: '#ffffff'
+            backgroundColor: "var(--accent-primary)",
+            color: "#ffffff",
           }}
         >
           <Send className="w-3.5 h-3.5 md:w-4 md:h-4" />

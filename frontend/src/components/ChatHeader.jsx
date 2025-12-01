@@ -9,10 +9,10 @@ const ChatHeader = () => {
 
   // Simple voice call function
   const handleVoiceCall = () => {
-    console.log('📞 Voice call button clicked');
-    
+    console.log("📞 Voice call button clicked");
+
     if (!selectedUser) {
-      toast.error('No user selected');
+      toast.error("No user selected");
       return;
     }
 
@@ -20,15 +20,15 @@ const ChatHeader = () => {
     if (window.voiceCallManager) {
       try {
         window.voiceCallManager.initiateCall(selectedUser._id);
-        console.log('📞 Call initiated to:', selectedUser.fullName);
-        toast('Calling ' + selectedUser.fullName);
+        console.log("📞 Call initiated to:", selectedUser.fullName);
+        toast("Calling " + selectedUser.fullName);
       } catch (error) {
-        console.error('Call error:', error);
-        toast.error('Failed to start call');
+        console.error("Call error:", error);
+        toast.error("Failed to start call");
       }
     } else {
-      console.error('Voice call manager not available');
-      toast.error('Voice calling not available');
+      console.error("Voice call manager not available");
+      toast.error("Voice calling not available");
     }
   };
 
@@ -39,7 +39,10 @@ const ChatHeader = () => {
           {/* Avatar */}
           <div className="avatar">
             <div className="size-10 rounded-full relative">
-              <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullName} />
+              <img
+                src={selectedUser.profilePic || "/avatar.png"}
+                alt={selectedUser.fullName}
+              />
             </div>
           </div>
 

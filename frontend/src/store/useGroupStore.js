@@ -44,7 +44,7 @@ export const useGroupStore = create((set, get) => ({
 
       console.log(`👥 Groups loaded in ${Date.now() - startTime}ms`);
     } catch (error) {
-      console.error('Error loading groups:', error);
+      console.error("Error loading groups:", error);
       // Fallback to cache nếu có lỗi network
       if (groupsCache && Array.isArray(groupsCache)) {
         console.log("📋 Network error, using cached groups");

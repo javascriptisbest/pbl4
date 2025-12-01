@@ -23,29 +23,26 @@ const ProfilePage = () => {
   };
 
   return (
-    <div 
+    <div
       className="h-full overflow-y-auto"
-      style={{ background: 'var(--bg-primary)' }}
+      style={{ background: "var(--bg-primary)" }}
     >
       <div className="max-w-2xl mx-auto p-4 py-8">
-        <div 
+        <div
           className="rounded-xl p-6 space-y-8"
-          style={{ 
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-primary)'
+          style={{
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border-primary)",
           }}
         >
           <div className="text-center">
-            <h1 
+            <h1
               className="text-2xl font-semibold"
-              style={{ color: 'var(--text-primary)' }}
+              style={{ color: "var(--text-primary)" }}
             >
               Profile
             </h1>
-            <p 
-              className="mt-2"
-              style={{ color: 'var(--text-secondary)' }}
-            >
+            <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
               Your profile information
             </p>
           </div>

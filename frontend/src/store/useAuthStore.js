@@ -4,24 +4,7 @@ import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { VoiceCallManager } from "../lib/voiceCallUtils.js";
 
-// Auto detect socket URL
-const getSocketURL = () => {
-  if (import.meta.env.VITE_SOCKET_URL) {
-    return import.meta.env.VITE_SOCKET_URL;
-  }
-
-  const hostname = window.location.hostname;
-
-  if (hostname === "localhost" || hostname === "127.0.0.1") {
-    return "http://localhost:5002";
-  } else if (hostname.includes("vercel.app")) {
-    return "https://pbl4-jecm.onrender.com";
-  } else if (hostname.includes("onrender.com")) {
-    return "https://pbl4-jecm.onrender.com";
-  } else {
-    return "https://pbl4-jecm.onrender.com";
-  }
-};
+import { getSocketURL } from "../config/urls.js";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -133,10 +116,24 @@ export const useAuthStore = create((set, get) => ({
     const { authUser } = get();
     if (!authUser || get().socket?.connected) return;
 
-    const socket = io(getSocketURL(), {
+    // Force clear any cached URLs for fresh detection
+    if (typeof window !== 'undefined' && window.clearURLCache) {
+      window.clearURLCache();
+    }
+
+    const socketURL = getSocketURL();
+    console.log("🔌 Auth socket connecting to:", socketURL, {
+      location: window?.location?.href,
+      timestamp: Date.now(),
+      version: 'auth-v2.1'
+    });
+
+    const socket = io(socketURL, {
       query: {
         userId: authUser._id,
       },
+      transports: ["polling", "websocket"],
+      forceNew: true, // Force new connection
     });
     socket.connect();
 

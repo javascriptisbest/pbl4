@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useGroupStore } from "../store/useGroupStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { getSocketURL } from "../config/urls.js";
 import Sidebar from "../components/Sidebar";
 import NoChatSelected from "../components/NoChatSelected";
 import ChatContainer from "../components/ChatContainer";
 import GroupChatContainer from "../components/GroupChatContainer";
 import VoiceCallModal from "../components/VoiceCallModal";
 import { VoiceCallManager } from "../lib/voiceCallUtils";
-import { performanceMonitor, measureAsync } from "../lib/performanceMonitor";
+import { measureAsync } from "../lib/performanceMonitor";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
 
@@ -16,31 +17,39 @@ const HomePage = () => {
   const { selectedUser } = useChatStore();
   const { selectedGroup } = useGroupStore();
   const { authUser } = useAuthStore();
-  
+
   // Simple voice call modal state
   const [voiceCallModal, setVoiceCallModal] = useState({
     isOpen: false,
     isIncoming: false,
     callerName: "",
     offer: null,
-    voiceCallManager: null
+    voiceCallManager: null,
   });
 
   useEffect(() => {
     if (!authUser) return;
 
     // Measure voice call setup performance
-    const setupVoiceCall = measureAsync('voiceCallSetup', async () => {
+    const setupVoiceCall = measureAsync("voiceCallSetup", async () => {
       console.log("🔧 Initializing voice call system...");
 
-      // Simple socket connection
-      const socket = io("http://localhost:5002", {
-        query: { userId: authUser._id },
-        transports: ['polling', 'websocket']
+      // Simple socket connection với URL detection
+      const socketURL = getSocketURL();
+      console.log("🌐 Voice call socket URL:", socketURL, {
+        location: window?.location?.href,
+        timestamp: Date.now(),
+        version: 'voice-v2.1'
       });
 
-      socket.on('connect', () => {
-        console.log('✅ Voice call socket connected');
+      const socket = io(socketURL, {
+        query: { userId: authUser._id },
+        transports: ["polling", "websocket"],
+        forceNew: true, // Force new connection
+      });
+
+      socket.on("connect", () => {
+        console.log("✅ Voice call socket connected");
       });
 
       // Initialize voice call manager
@@ -49,47 +58,65 @@ const HomePage = () => {
 
       // Simple event handlers
       voiceCallManager.onIncomingCall = (callerId, offer) => {
-        console.log('📞 Incoming call from:', callerId);
+        console.log("📞 Incoming call from:", callerId);
         setVoiceCallModal({
           isOpen: true,
           isIncoming: true,
           callerName: `User ${callerId.slice(0, 8)}`,
           offer,
-          voiceCallManager
+          voiceCallManager,
         });
-        toast('📞 Incoming voice call!');
+        toast("📞 Incoming voice call!");
       };
 
       voiceCallManager.onCallInitiated = () => {
-        console.log('📞 Call initiated');
+        console.log("📞 Call initiated");
         setVoiceCallModal({
           isOpen: true,
           isIncoming: false,
           callerName: selectedUser?.fullName || "User",
           offer: null,
-          voiceCallManager
+          voiceCallManager,
         });
-        toast('📞 Calling...');
+        toast("📞 Calling...");
       };
 
       voiceCallManager.onCallDisconnected = () => {
-        console.log('📞 Call disconnected');
-        setVoiceCallModal({ isOpen: false, isIncoming: false, callerName: "", offer: null, voiceCallManager: null });
+        console.log("📞 Call disconnected");
+        setVoiceCallModal({
+          isOpen: false,
+          isIncoming: false,
+          callerName: "",
+          offer: null,
+          voiceCallManager: null,
+        });
       };
 
       voiceCallManager.onCallRejected = () => {
-        console.log('📞 Call rejected');
-        setVoiceCallModal({ isOpen: false, isIncoming: false, callerName: "", offer: null, voiceCallManager: null });
+        console.log("📞 Call rejected");
+        setVoiceCallModal({
+          isOpen: false,
+          isIncoming: false,
+          callerName: "",
+          offer: null,
+          voiceCallManager: null,
+        });
       };
 
       voiceCallManager.onCallConnected = () => {
-        console.log('📞 Call connected!');
-        toast.success('Call connected');
+        console.log("📞 Call connected!");
+        toast.success("Call connected");
       };
 
       voiceCallManager.onCallFailed = (error) => {
-        console.log('📞 Call failed:', error);
-        setVoiceCallModal({ isOpen: false, isIncoming: false, callerName: "", offer: null, voiceCallManager: null });
+        console.log("📞 Call failed:", error);
+        setVoiceCallModal({
+          isOpen: false,
+          isIncoming: false,
+          callerName: "",
+          offer: null,
+          voiceCallManager: null,
+        });
         toast.error(`Call failed: ${error}`);
       };
 
@@ -99,7 +126,7 @@ const HomePage = () => {
     setupVoiceCall().then((socket) => {
       // Cleanup function setup
       return () => {
-        console.log('🧹 Cleaning up voice call system');
+        console.log("🧹 Cleaning up voice call system");
         if (window.voiceCallManager) {
           window.voiceCallManager.destroy();
           window.voiceCallManager = null;
@@ -110,7 +137,7 @@ const HomePage = () => {
 
     // Cleanup
     return () => {
-      console.log('🧹 Cleaning up voice call system');
+      console.log("🧹 Cleaning up voice call system");
       if (window.voiceCallManager) {
         window.voiceCallManager.destroy();
         window.voiceCallManager = null;
@@ -119,9 +146,15 @@ const HomePage = () => {
   }, [authUser, selectedUser]);
 
   const handleCloseCallModal = () => {
-    console.log('❌ Closing call modal');
-    setVoiceCallModal({ isOpen: false, isIncoming: false, callerName: "", offer: null, voiceCallManager: null });
-    
+    console.log("❌ Closing call modal");
+    setVoiceCallModal({
+      isOpen: false,
+      isIncoming: false,
+      callerName: "",
+      offer: null,
+      voiceCallManager: null,
+    });
+
     if (voiceCallModal.voiceCallManager?.isCallActive) {
       voiceCallModal.voiceCallManager.endCall();
     }
@@ -133,16 +166,16 @@ const HomePage = () => {
         <div className="bg-white w-full h-full">
           <div className="flex h-full overflow-hidden">
             <Sidebar />
-            
+
             {!selectedUser && !selectedGroup && <NoChatSelected />}
             {selectedUser && <ChatContainer />}
             {selectedGroup && <GroupChatContainer />}
           </div>
         </div>
       </div>
-      
+
       {/* Simple Voice Call Modal */}
-      <VoiceCallModal 
+      <VoiceCallModal
         isOpen={voiceCallModal.isOpen}
         isIncoming={voiceCallModal.isIncoming}
         callerName={voiceCallModal.callerName}

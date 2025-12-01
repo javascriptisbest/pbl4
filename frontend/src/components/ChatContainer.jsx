@@ -86,9 +86,7 @@ const ChatContainer = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
-            <p className="text-sm text-base-content/70">
-              Đang tải tin nhắn...
-            </p>
+            <p className="text-sm text-base-content/70">Đang tải tin nhắn...</p>
           </div>
         </div>
       </div>
@@ -161,14 +159,18 @@ const ChatContainer = () => {
                   {message.text && (
                     <div
                       className={`px-4 py-3 rounded-2xl shadow-sm max-w-xs break-words ${
-                        isMyMessage
-                          ? "rounded-br-md"
-                          : "rounded-bl-md border"
+                        isMyMessage ? "rounded-br-md" : "rounded-bl-md border"
                       }`}
                       style={{
-                        background: isMyMessage ? 'var(--message-sent)' : 'var(--message-received)',
-                        color: isMyMessage ? 'var(--message-text-sent)' : 'var(--message-text-received)',
-                        borderColor: !isMyMessage ? 'var(--border-primary)' : 'none'
+                        background: isMyMessage
+                          ? "var(--message-sent)"
+                          : "var(--message-received)",
+                        color: isMyMessage
+                          ? "var(--message-text-sent)"
+                          : "var(--message-text-received)",
+                        borderColor: !isMyMessage
+                          ? "var(--border-primary)"
+                          : "none",
                       }}
                     >
                       <p className="text-sm leading-relaxed">{message.text}</p>
