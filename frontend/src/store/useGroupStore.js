@@ -34,7 +34,7 @@ export const useGroupStore = create((set, get) => ({
 
     try {
       const res = await axiosInstance.get("/groups");
-      const groups = res.data;
+      const groups = Array.isArray(res.data) ? res.data : [];
 
       set({
         groups,
@@ -44,11 +44,14 @@ export const useGroupStore = create((set, get) => ({
 
       console.log(`👥 Groups loaded in ${Date.now() - startTime}ms`);
     } catch (error) {
+      console.error('Error loading groups:', error);
       // Fallback to cache nếu có lỗi network
-      if (groupsCache) {
+      if (groupsCache && Array.isArray(groupsCache)) {
         console.log("📋 Network error, using cached groups");
         set({ groups: groupsCache });
       } else {
+        // Ensure groups is always an array, even on error
+        set({ groups: [] });
         toast.error(error.response?.data?.message || "Failed to load groups");
       }
     } finally {

@@ -191,14 +191,20 @@ const UnifiedSidebar = () => {
                     <div className="font-semibold truncate text-base-content mb-1">
                       {user.fullName}
                     </div>
-                    <div className={`text-xs font-medium flex items-center gap-1 ${
-                      onlineUsers.includes(user._id) 
-                        ? "text-green-600" 
-                        : "text-base-content/50"
-                    }`}>
-                      <div className={`w-2 h-2 rounded-full ${
-                        onlineUsers.includes(user._id) ? "bg-green-500" : "bg-gray-400"
-                      }`} />
+                    <div
+                      className={`text-xs font-medium flex items-center gap-1 ${
+                        onlineUsers.includes(user._id)
+                          ? "text-green-600"
+                          : "text-base-content/50"
+                      }`}
+                    >
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          onlineUsers.includes(user._id)
+                            ? "bg-green-500"
+                            : "bg-gray-400"
+                        }`}
+                      />
                       {onlineUsers.includes(user._id) ? "Online" : "Offline"}
                     </div>
                   </div>
@@ -216,9 +222,13 @@ const UnifiedSidebar = () => {
                   <div className="w-16 h-16 bg-base-300/50 rounded-full flex items-center justify-center mb-4">
                     <MessageSquare className="w-8 h-8 text-base-content/30" />
                   </div>
-                  <h3 className="font-medium text-base-content/70 mb-1">No users found</h3>
+                  <h3 className="font-medium text-base-content/70 mb-1">
+                    No users found
+                  </h3>
                   <p className="text-sm text-base-content/50">
-                    {showOnlineOnly ? "No users are currently online" : "No users to show"}
+                    {showOnlineOnly
+                      ? "No users are currently online"
+                      : "No users to show"}
                   </p>
                 </div>
               )}
@@ -230,8 +240,13 @@ const UnifiedSidebar = () => {
                   <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl flex items-center justify-center mb-4">
                     <Users className="w-10 h-10 text-primary/70" />
                   </div>
-                  <h3 className="font-semibold text-base-content mb-2">No groups yet</h3>
-                  <p className="text-sm text-base-content/60 mb-4">Create your first group to start chatting with multiple people</p>
+                  <h3 className="font-semibold text-base-content mb-2">
+                    No groups yet
+                  </h3>
+                  <p className="text-sm text-base-content/60 mb-4">
+                    Create your first group to start chatting with multiple
+                    people
+                  </p>
                   <button
                     onClick={() => setIsCreateModalOpen(true)}
                     className="btn btn-primary gap-2 shadow-lg hover:shadow-xl transition-all duration-300"

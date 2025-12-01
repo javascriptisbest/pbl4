@@ -20,6 +20,33 @@ export const useChatStore = create((set, get) => ({
   isMessagesLoading: false, // Loading state khi fetch messages
   usersCache: null, // Cache users data
   usersCacheTime: null, // Thời gian cache
+  messagesCache: {}, // Cache messages by userId: { userId: { messages: [], timestamp: number } }
+
+  // Set selected user with immediate cache check
+  setSelectedUser: (user) => {
+    const { messagesCache } = get();
+    const userId = user?._id;
+
+    set({ selectedUser: user });
+
+    // If we have cached messages for this user, show them immediately
+    if (userId && messagesCache[userId]) {
+      const cached = messagesCache[userId];
+      const cacheAge = Date.now() - cached.timestamp;
+
+      // Use cache if less than 2 minutes old
+      if (cacheAge < 2 * 60 * 1000) {
+        console.log(`💬 Using cached messages for user ${userId}`);
+        set({ messages: cached.messages });
+        return;
+      }
+    }
+
+    // Clear messages if no cache or cache is stale
+    if (userId) {
+      set({ messages: [] });
+    }
+  },
 
   getUsers: async (forceRefresh = false) => {
     const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
@@ -43,7 +70,7 @@ export const useChatStore = create((set, get) => ({
 
     try {
       const res = await axiosInstance.get("/messages/users");
-      const users = res.data;
+      const users = Array.isArray(res.data) ? res.data : [];
 
       set({
         users,
@@ -53,11 +80,14 @@ export const useChatStore = create((set, get) => ({
 
       console.log(`👥 Users loaded in ${Date.now() - startTime}ms`);
     } catch (error) {
+      console.error('Error loading users:', error);
       // Fallback to cache nếu có lỗi network
-      if (usersCache) {
+      if (usersCache && Array.isArray(usersCache)) {
         console.log("📋 Network error, using cached users");
         set({ users: usersCache });
       } else {
+        // Ensure users is always an array, even on error
+        set({ users: [] });
         toast.error(error.response?.data?.message || "Failed to load users");
       }
     } finally {
@@ -65,16 +95,48 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  getMessages: async (userId) => {
+  getMessages: async (userId, forceRefresh = false) => {
+    const { messagesCache } = get();
+    const now = Date.now();
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh && messagesCache[userId]) {
+      const cached = messagesCache[userId];
+      const cacheAge = now - cached.timestamp;
+
+      // Use cache if less than 2 minutes old
+      if (cacheAge < 2 * 60 * 1000) {
+        console.log(`💬 Using cached messages for user ${userId}`);
+        set({ messages: cached.messages });
+        return;
+      }
+    }
+
     set({ isMessagesLoading: true });
     const startTime = Date.now();
 
     try {
       const res = await axiosInstance.get(`/messages/${userId}`);
-      set({ messages: res.data });
+      const messages = res.data;
+
+      // Update both current messages and cache
+      set({
+        messages,
+        messagesCache: {
+          ...messagesCache,
+          [userId]: { messages, timestamp: now },
+        },
+      });
+
       console.log(`💬 Messages loaded in ${Date.now() - startTime}ms`);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to load messages");
+      // Fallback to cache if available
+      if (messagesCache[userId]) {
+        console.log("📋 Network error, using cached messages");
+        set({ messages: messagesCache[userId].messages });
+      } else {
+        toast.error(error.response?.data?.message || "Failed to load messages");
+      }
     } finally {
       set({ isMessagesLoading: false });
     }
@@ -130,19 +192,31 @@ export const useChatStore = create((set, get) => ({
       );
 
       // Replace temp message with real message from server
+      const currentMessages = get().messages;
+      const { messagesCache, selectedUser } = get();
+
+      // Remove temp message và add real message
+      const withoutTemp = currentMessages.filter(
+        (msg) => msg._id !== tempMessage._id
+      );
+      // Kiểm tra xem real message đã tồn tại chưa (tránh duplicate)
+      const hasRealMessage = withoutTemp.some(
+        (msg) => msg._id === res.data._id
+      );
+      const newMessages = hasRealMessage
+        ? withoutTemp
+        : [...withoutTemp, res.data];
+
+      // Update both current messages and cache
       set({
-        messages: (() => {
-          const currentMessages = get().messages;
-          // Remove temp message và add real message
-          const withoutTemp = currentMessages.filter(
-            (msg) => msg._id !== tempMessage._id
-          );
-          // Kiểm tra xem real message đã tồn tại chưa (tránh duplicate)
-          const hasRealMessage = withoutTemp.some(
-            (msg) => msg._id === res.data._id
-          );
-          return hasRealMessage ? withoutTemp : [...withoutTemp, res.data];
-        })(),
+        messages: newMessages,
+        messagesCache: {
+          ...messagesCache,
+          [selectedUser._id]: {
+            messages: newMessages,
+            timestamp: Date.now(),
+          },
+        },
       });
     } catch (error) {
       // Remove temp message on error
@@ -205,14 +279,26 @@ export const useChatStore = create((set, get) => ({
       });
 
       // Chống trùng tin (optimistic update vs server echo)
+      const currentMessages = get().messages;
+      const { messagesCache } = get();
+      const userId = selectedUser._id;
+
+      // Nếu message đã tồn tại (theo _id), không add
+      const updatedMessages = currentMessages.some(
+        (m) => m._id === newMessage._id
+      )
+        ? currentMessages
+        : [...currentMessages, newMessage];
+
       set({
-        messages: (() => {
-          const msgs = get().messages;
-          // Nếu message đã tồn tại (theo _id), không add
-          return msgs.some((m) => m._id === newMessage._id)
-            ? msgs
-            : [...msgs, newMessage];
-        })(),
+        messages: updatedMessages,
+        messagesCache: {
+          ...messagesCache,
+          [userId]: {
+            messages: updatedMessages,
+            timestamp: Date.now(),
+          },
+        },
       });
     });
 
@@ -258,6 +344,4 @@ export const useChatStore = create((set, get) => ({
       toast.error(error.response?.data?.message || "Failed to delete message");
     }
   },
-
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
 }));

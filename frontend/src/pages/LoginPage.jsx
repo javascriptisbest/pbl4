@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import AuthImagePattern from "../components/AuthImagePattern";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, Loader2, Lock, Mail, MessageSquare } from "lucide-react";
+import { Eye, EyeOff, LogIn, MessageCircle } from "lucide-react";
+import AuthImagePattern from "../components/AuthImagePattern";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -12,108 +12,151 @@ const LoginPage = () => {
   });
   const { login, isLoggingIn } = useAuthStore();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     login(formData);
   };
 
   return (
-    <div className="h-screen grid lg:grid-cols-2">
+    <div 
+      className="h-full flex"
+      style={{ background: 'var(--bg-primary)' }}
+    >
       {/* Left Side - Form */}
-      <div className="flex flex-col justify-center items-center p-6 sm:p-12">
-        <div className="w-full max-w-md space-y-8">
+      <div 
+        className="flex-1 flex items-center justify-center p-8"
+        style={{ background: 'var(--bg-secondary)' }}
+      >
+        <div className="w-full max-w-md">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="flex flex-col items-center gap-2 group">
-              <div
-                className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20
-              transition-colors"
-              >
-                <MessageSquare className="w-6 h-6 text-primary" />
-              </div>
-              <h1 className="text-2xl font-bold mt-2">Welcome Back</h1>
-              <p className="text-base-content/60">Sign in to your account</p>
+            <div 
+              className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg"
+              style={{ background: 'var(--accent-primary)' }}
+            >
+              <MessageCircle className="w-6 h-6 text-white" />
             </div>
+            <h1 
+              className="text-3xl font-bold"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              TalkSpace
+            </h1>
+            <p 
+              className="mt-2"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Đăng nhập vào tài khoản của bạn
+            </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Email</span>
+            <div>
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Email
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-base-content/40" />
-                </div>
-                <input
-                  type="email"
-                  className={`input input-bordered w-full pl-10`}
-                  placeholder="you@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
+              <input
+                type="email"
+                className="w-full px-4 py-3 rounded-lg focus:outline-none transition-all duration-200"
+                style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  border: '2px solid var(--bg-accent)',
+                  color: 'var(--text-primary)'
+                }}
+                placeholder="your@email.com"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+              />
             </div>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Password</span>
+            <div>
+              <label 
+                className="block text-sm font-medium mb-2"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Mật khẩu
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-base-content/40" />
-                </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  className={`input input-bordered w-full pl-10`}
+                  className="w-full px-4 py-3 rounded-lg focus:outline-none transition-all duration-200 pr-12"
+                  style={{
+                    backgroundColor: 'var(--bg-primary)',
+                    border: '2px solid var(--bg-accent)',
+                    color: 'var(--text-primary)'
+                  }}
                   placeholder="••••••••"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 transition-colors"
+                  style={{ color: 'var(--text-secondary)' }}
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-base-content/40" />
+                    <EyeOff className="w-5 h-5" />
                   ) : (
-                    <Eye className="h-5 w-5 text-base-content/40" />
+                    <Eye className="w-5 h-5" />
                   )}
                 </button>
               </div>
             </div>
 
-            <button type="submit" className="btn btn-primary w-full" disabled={isLoggingIn}>
+            <button
+              type="submit"
+              disabled={isLoggingIn}
+              className="w-full font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+              style={{
+                backgroundColor: 'var(--accent-primary)',
+                color: '#ffffff'
+              }}
+            >
               {isLoggingIn ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Loading...
-                </>
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
               ) : (
-                "Sign in"
+                <>
+                  <LogIn className="w-5 h-5" />
+                  <span>Đăng nhập</span>
+                </>
               )}
             </button>
           </form>
 
-          <div className="text-center">
-            <p className="text-base-content/60">
-              Don&apos;t have an account?{" "}
-              <Link to="/signup" className="link link-primary">
-                Create account
+          {/* Footer */}
+          <div className="mt-8 text-center">
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Chưa có tài khoản?{" "}
+              <Link
+                to="/signup"
+                className="font-medium transition-colors"
+                style={{ color: 'var(--accent-primary)' }}
+              >
+                Đăng ký ngay
               </Link>
             </p>
           </div>
         </div>
       </div>
 
-      {/* Right Side - Image/Pattern */}
-      <AuthImagePattern
-        title={"Welcome back!"}
-        subtitle={"Sign in to continue your conversations and catch up with your messages."}
-      />
+      {/* Right Side - Image Pattern */}
+      <div className="hidden lg:block flex-1">
+        <AuthImagePattern
+          title="Kết nối và trò chuyện"
+          subtitle="Tham gia vào cộng đồng lớn của chúng tôi và kết nối với bạn bè trên khắp thế giới."
+        />
+      </div>
     </div>
   );
 };
+
 export default LoginPage;

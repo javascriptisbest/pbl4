@@ -1,64 +1,45 @@
-import { X, Phone, ArrowLeft } from "lucide-react";
+import { X, Phone } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
-import Avatar from "./Avatar";
 
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser } = useChatStore();
-  const { onlineUsers, voiceCallManager } = useAuthStore();
+  const { onlineUsers } = useAuthStore();
 
-  const handleVoiceCall = async () => {
-    if (!voiceCallManager) {
-      toast.error("Voice call not available");
+  // Simple voice call function
+  const handleVoiceCall = () => {
+    console.log('📞 Voice call button clicked');
+    
+    if (!selectedUser) {
+      toast.error('No user selected');
       return;
     }
 
-    if (!selectedUser?._id) {
-      toast.error("No user selected");
-      return;
-    }
-
-    try {
-      // Set caller name in the store before initiating call
-      const { callModal } = useAuthStore.getState();
-      useAuthStore.setState({
-        callModal: {
-          ...callModal,
-          callerName: selectedUser.fullName,
-        },
-      });
-
-      await voiceCallManager.initiateCall(selectedUser._id);
-      toast.success(`Calling ${selectedUser.fullName}...`);
-    } catch (error) {
-      console.error("Error initiating call:", error);
-      toast.error(error.message);
+    // Use global voice call manager
+    if (window.voiceCallManager) {
+      try {
+        window.voiceCallManager.initiateCall(selectedUser._id);
+        console.log('📞 Call initiated to:', selectedUser.fullName);
+        toast('Calling ' + selectedUser.fullName);
+      } catch (error) {
+        console.error('Call error:', error);
+        toast.error('Failed to start call');
+      }
+    } else {
+      console.error('Voice call manager not available');
+      toast.error('Voice calling not available');
     }
   };
 
   return (
-    <div className="p-2.5 border-b border-base-300 bg-base-100/80 backdrop-blur-sm">
+    <div className="p-2.5 border-b border-base-300">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* Enhanced Back button for mobile - More prominent */}
-          <button
-            onClick={() => setSelectedUser(null)}
-            className="btn btn-ghost btn-sm btn-circle md:hidden bg-base-200/50 hover:bg-base-300 border border-base-300/50"
-            title="Back to contacts"
-          >
-            <ArrowLeft className="w-5 h-5 text-primary" />
-          </button>
-
           {/* Avatar */}
           <div className="avatar">
             <div className="size-10 rounded-full relative">
-              <Avatar
-                src={selectedUser.profilePic}
-                alt={selectedUser.fullName}
-                size="md"
-                loading="eager"
-              />
+              <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullName} />
             </div>
           </div>
 
@@ -71,29 +52,28 @@ const ChatHeader = () => {
           </div>
         </div>
 
-        {/* Call and Close buttons */}
+        {/* Call and close buttons */}
         <div className="flex items-center gap-2">
-          {/* Voice Call button */}
+          {/* Voice Call Button */}
           <button
             onClick={handleVoiceCall}
-            className="btn btn-ghost btn-sm btn-circle"
-            title={`Call ${selectedUser.fullName}`}
-            disabled={!onlineUsers.includes(selectedUser._id)}
+            className="btn btn-sm btn-circle btn-ghost hover:bg-blue-100 text-blue-600"
+            title="Voice Call"
           >
-            <Phone className="w-5 h-5" />
+            <Phone size={18} />
           </button>
 
-          {/* Close button - hidden on mobile (use back button instead) */}
+          {/* Close chat button */}
           <button
             onClick={() => setSelectedUser(null)}
-            className="btn btn-ghost btn-sm btn-circle hidden md:flex"
-            title="Close chat"
+            className="btn btn-sm btn-circle btn-ghost"
           >
-            <X className="w-5 h-5" />
+            <X size={20} />
           </button>
         </div>
       </div>
     </div>
   );
 };
+
 export default ChatHeader;

@@ -122,7 +122,9 @@ const MessageInputSimple = ({ onSendMessage }) => {
     media.audioPreview;
 
   return (
-    <div className="p-4 border-t border-base-300 bg-base-100">
+    <div 
+      className="p-2 border-t border-base-300"
+    >
       {/* Media Previews */}
       {hasMedia && (
         <div className="mb-3 flex flex-wrap gap-2">
@@ -164,26 +166,26 @@ const MessageInputSimple = ({ onSendMessage }) => {
       {media.isUploading && (
         <div className="mb-3">
           <div className="flex items-center gap-2">
-            <span className="loading loading-spinner loading-sm"></span>
-            <span className="text-sm">{media.uploadProgress}</span>
+            <span className="loading loading-spinner loading-sm text-primary"></span>
+            <span className="text-sm font-medium">{media.uploadProgress}</span>
           </div>
         </div>
       )}
 
       {/* Voice Recording */}
       {isRecording && (
-        <div className="mb-3 flex items-center gap-3 p-3 bg-error/10 rounded-lg">
+        <div className="mb-3 flex items-center gap-3 p-3 bg-gradient-to-r from-error/10 to-error/20 rounded-2xl shadow-modern">
           <div className="flex items-center gap-2 flex-1">
-            <div className="w-3 h-3 bg-error rounded-full animate-pulse"></div>
-            <span className="font-medium">Recording...</span>
-            <span className="text-sm text-base-content/60">
+            <div className="w-3 h-3 bg-error rounded-full animate-pulse shadow-lg"></div>
+            <span className="font-semibold">Recording...</span>
+            <span className="text-sm text-base-content/70">
               {formatAudioDuration(recordingDuration)}
             </span>
           </div>
           <button
             type="button"
             onClick={stopRecording}
-            className="btn btn-sm btn-error"
+            className="btn btn-sm btn-error shadow-modern hover:shadow-lg transition-all"
           >
             Stop
           </button>
@@ -220,7 +222,11 @@ const MessageInputSimple = ({ onSendMessage }) => {
             <button
               type="button"
               onClick={() => setShowMediaMenu(!showMediaMenu)}
-              className="btn btn-ghost btn-xs md:btn-sm w-7 h-7 md:w-auto md:h-auto min-h-7 md:min-h-8 p-0 md:p-2"
+              className="w-7 h-7 md:w-auto md:h-auto min-h-7 md:min-h-8 p-0 md:p-2 transition-all rounded-lg"
+              style={{
+                backgroundColor: 'var(--bg-accent)',
+                color: 'var(--accent-primary)'
+              }}
               disabled={media.isUploading || isRecording}
               title="Attach"
             >
@@ -228,14 +234,14 @@ const MessageInputSimple = ({ onSendMessage }) => {
             </button>
 
             {showMediaMenu && (
-              <div className="absolute bottom-full left-0 mb-2 bg-base-200 rounded-lg shadow-xl border border-base-300 py-1 min-w-[120px] z-10">
+              <div className="absolute bottom-full left-0 mb-2 glass-effect rounded-2xl shadow-modern-lg border border-primary/20 py-1 min-w-[120px] z-10">
                 <button
                   type="button"
                   onClick={() => {
                     imageInputRef.current?.click();
                     setShowMediaMenu(false);
                   }}
-                  className="w-full px-3 py-2 text-left hover:bg-base-300 flex items-center gap-2 text-sm"
+                  className="w-full px-3 py-2 text-left hover:bg-primary/10 hover:text-primary flex items-center gap-2 text-sm transition-colors rounded-xl"
                 >
                   📷 Image
                 </button>
@@ -245,7 +251,7 @@ const MessageInputSimple = ({ onSendMessage }) => {
                     videoInputRef.current?.click();
                     setShowMediaMenu(false);
                   }}
-                  className="w-full px-3 py-2 text-left hover:bg-base-300 flex items-center gap-2 text-sm"
+                  className="w-full px-3 py-2 text-left hover:bg-primary/10 hover:text-primary flex items-center gap-2 text-sm transition-colors rounded-xl"
                 >
                   🎥 Video
                 </button>
@@ -255,7 +261,7 @@ const MessageInputSimple = ({ onSendMessage }) => {
                     fileInputRef.current?.click();
                     setShowMediaMenu(false);
                   }}
-                  className="w-full px-3 py-2 text-left hover:bg-base-300 flex items-center gap-2 text-sm"
+                  className="w-full px-3 py-2 text-left hover:bg-primary/10 hover:text-primary flex items-center gap-2 text-sm transition-colors rounded-xl"
                 >
                   📎 File
                 </button>
@@ -267,9 +273,11 @@ const MessageInputSimple = ({ onSendMessage }) => {
           <button
             type="button"
             onClick={isRecording ? stopRecording : startRecording}
-            className={`btn btn-ghost btn-xs md:btn-sm w-7 h-7 md:w-auto md:h-auto min-h-7 md:min-h-8 p-0 md:p-2 ${
-              isRecording ? "text-error" : ""
-            }`}
+            className="w-7 h-7 md:w-auto md:h-auto min-h-7 md:min-h-8 p-0 md:p-2 transition-all rounded-lg border"
+            style={{
+              backgroundColor: isRecording ? 'var(--message-sent)' : 'var(--bg-accent)',
+              color: isRecording ? '#ffffff' : 'var(--accent-primary)'
+            }}
             disabled={media.isUploading}
             title="Voice"
           >
@@ -291,8 +299,11 @@ const MessageInputSimple = ({ onSendMessage }) => {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Type a message..."
-            className="input input-bordered w-full text-base min-h-[44px] focus:outline-offset-0"
-            style={{ fontSize: '16px' }}
+            className="w-full text-base min-h-[44px] focus:outline-none rounded-2xl transition-all px-4 py-2"
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--text-primary)'
+            }}
             disabled={media.isUploading || isRecording}
             autoComplete="off"
             autoCorrect="off"
@@ -306,7 +317,11 @@ const MessageInputSimple = ({ onSendMessage }) => {
           disabled={
             (!text.trim() && !hasMedia) || media.isUploading || isRecording
           }
-          className="btn btn-primary flex-shrink-0 w-8 h-8 md:w-auto md:h-auto min-h-8 md:min-h-12 p-0 md:px-4"
+          className="flex-shrink-0 w-8 h-8 md:w-auto md:h-auto min-h-8 md:min-h-12 p-0 md:px-4 transition-all rounded-2xl"
+          style={{
+            backgroundColor: 'var(--accent-primary)',
+            color: '#ffffff'
+          }}
         >
           <Send className="w-3.5 h-3.5 md:w-4 md:h-4" />
         </button>

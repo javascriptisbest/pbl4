@@ -1,20 +1,20 @@
-﻿import { useEffect, useRef, useState } from "react";
-import { useChatStore } from "../store/useChatStore";
+import { useEffect, useRef, useState } from "react";
+import { useGroupStore } from "../store/useGroupStore";
 import { useAuthStore } from "../store/useAuthStore";
-import ChatHeader from "./ChatHeader";
+import { formatMessageTime } from "../lib/utils";
+import { Users, Crown, Clock, Users2 } from "lucide-react";
 import MessageInputSimple from "./MessageInputSimple";
 import ImageModal from "./ImageModal";
-import { formatMessageTime } from "../lib/utils";
 
-const ChatContainer = () => {
+const GroupChatContainer = () => {
   const {
-    messages,
-    getMessages,
-    isMessagesLoading,
-    selectedUser,
-    subscribeToMessages,
-    unsubscribeFromMessages,
-  } = useChatStore();
+    groupMessages,
+    getGroupMessages,
+    isGroupMessagesLoading,
+    selectedGroup,
+    subscribeToGroupMessages,
+    unsubscribeFromGroupMessages,
+  } = useGroupStore();
 
   const { authUser } = useAuthStore();
   const messagesEndRef = useRef(null);
@@ -25,13 +25,13 @@ const ChatContainer = () => {
     currentIndex: 0,
   });
 
-  // Get all images from messages for navigation
+  // Get all images from group messages for navigation
   const getAllImages = () => {
-    return messages
+    return groupMessages
       .filter((msg) => msg.image)
       .map((msg) => ({
         url: msg.image,
-        alt: "Shared image",
+        alt: "Group shared image",
         messageId: msg._id,
       }));
   };
@@ -43,7 +43,7 @@ const ChatContainer = () => {
     setImageModal({
       isOpen: true,
       imageUrl,
-      altText: "Shared image",
+      altText: "Group shared image",
       currentIndex: Math.max(0, currentIndex),
     });
   };
@@ -62,32 +62,34 @@ const ChatContainer = () => {
   };
 
   useEffect(() => {
-    getMessages(selectedUser._id);
-    subscribeToMessages();
+    if (selectedGroup?._id) {
+      getGroupMessages(selectedGroup._id);
+      subscribeToGroupMessages();
+    }
 
-    return () => unsubscribeFromMessages();
+    return () => unsubscribeFromGroupMessages();
   }, [
-    selectedUser._id,
-    getMessages,
-    subscribeToMessages,
-    unsubscribeFromMessages,
+    selectedGroup?._id,
+    getGroupMessages,
+    subscribeToGroupMessages,
+    unsubscribeFromGroupMessages,
   ]);
 
   useEffect(() => {
-    if (messagesEndRef.current && messages) {
+    if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages]);
+  }, [groupMessages]);
 
-  if (isMessagesLoading) {
+  if (isGroupMessagesLoading) {
     return (
       <div className="flex-1 flex flex-col h-full min-w-0">
-        <ChatHeader />
+        <GroupChatHeader />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
             <p className="text-sm text-base-content/70">
-              Đang tải tin nhắn...
+              Đang tải tin nhắn nhóm...
             </p>
           </div>
         </div>
@@ -95,13 +97,29 @@ const ChatContainer = () => {
     );
   }
 
+  if (!selectedGroup) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-w-0">
+        <div className="text-center">
+          <Users className="w-16 h-16 mx-auto mb-4 text-base-content/50" />
+          <h3 className="text-xl font-semibold mb-2">
+            Chọn một nhóm
+          </h3>
+          <p className="text-base-content/70">
+            Chọn một nhóm từ sidebar để bắt đầu trò chuyện
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col h-full min-w-0">
-      <ChatHeader />
+      <GroupChatHeader />
 
       <div className="flex-1 overflow-y-auto space-y-1 scroll-smooth">
-        {messages.map((message) => {
-          // Fix: senderId là object, cần lấy _id
+        {groupMessages.map((message) => {
+          // Fix: senderId có thể là object hoặc string
           const messageSenderId =
             typeof message.senderId === "object"
               ? message.senderId._id
@@ -121,8 +139,11 @@ const ChatContainer = () => {
                   isMyMessage ? "flex-row-reverse" : "flex-row"
                 }`}
               >
-                {/* Avatar - hiển thị cho cả 2 bên */}
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium shadow-sm flex-shrink-0">
+                {/* Avatar */}
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium shadow-sm flex-shrink-0 transition-all duration-300"
+                  style={{ backgroundColor: 'var(--accent-primary)' }}
+                >
                   {isMyMessage ? (
                     authUser?.profilePic ? (
                       <img
@@ -147,7 +168,7 @@ const ChatContainer = () => {
                     <span className="text-xs font-bold">
                       {typeof message.senderId === "object"
                         ? message.senderId.fullName?.charAt(0)
-                        : selectedUser?.fullName?.charAt(0)}
+                        : "?"}
                     </span>
                   )}
                 </div>
@@ -157,6 +178,15 @@ const ChatContainer = () => {
                     isMyMessage ? "items-end" : "items-start"
                   }`}
                 >
+                  {/* Sender name (chỉ hiển thị cho tin nhắn của người khác) */}
+                  {!isMyMessage && (
+                    <div className="text-xs text-gray-500 mb-1 px-1">
+                      {typeof message.senderId === "object"
+                        ? message.senderId.fullName
+                        : "Unknown"}
+                    </div>
+                  )}
+
                   {/* Text Bubble - chỉ cho text */}
                   {message.text && (
                     <div
@@ -273,7 +303,7 @@ const ChatContainer = () => {
 
                   {/* Timestamp */}
                   <div
-                    className={`text-xs text-gray-500 px-1 ${
+                    className={`text-xs text-gray-500 mt-1 px-1 ${
                       isMyMessage ? "text-right" : "text-left"
                     }`}
                   >
@@ -287,7 +317,7 @@ const ChatContainer = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <MessageInputSimple />
+      <GroupMessageInput />
 
       <ImageModal
         isOpen={imageModal.isOpen}
@@ -309,4 +339,104 @@ const ChatContainer = () => {
   );
 };
 
-export default ChatContainer;
+// Group Chat Header Component
+const GroupChatHeader = () => {
+  const { selectedGroup } = useGroupStore();
+  const { onlineUsers } = useAuthStore();
+
+  if (!selectedGroup) return null;
+
+  const onlineMembersCount =
+    selectedGroup.members?.filter((member) => onlineUsers.includes(member._id))
+      .length || 0;
+
+  return (
+    <div 
+      className="border-b p-3"
+      style={{ 
+        background: 'var(--bg-secondary)', 
+        borderColor: 'var(--border-primary)' 
+      }}
+    >
+      <div className="flex items-center space-x-3">
+        {/* Group Avatar */}
+        <div 
+          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm transition-all duration-300"
+          style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+        >
+          {selectedGroup.avatar ? (
+            <img
+              src={selectedGroup.avatar}
+              alt={selectedGroup.name}
+              className="w-full h-full rounded-full object-cover"
+            />
+          ) : (
+            <Users className="w-5 h-5" />
+          )}
+        </div>
+
+        {/* Group Info */}
+        <div className="flex-1">
+          <div className="flex items-center space-x-2">
+            <h3 
+              className="font-semibold text-sm"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              {selectedGroup.name}
+            </h3>
+            {selectedGroup.isAdmin && (
+              <Crown
+                className="w-3 h-3 text-yellow-500"
+                title="You are admin"
+              />
+            )}
+          </div>
+          <div 
+            className="flex items-center space-x-4 text-xs"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            <div className="flex items-center space-x-1">
+              <Users2 className="w-3 h-3" />
+              <span>{selectedGroup.members?.length || 0} thành viên</span>
+            </div>
+            {onlineMembersCount > 0 && (
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span>{onlineMembersCount} đang online</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Group Actions */}
+        <div className="flex items-center space-x-2">
+          {selectedGroup.createdAt && (
+            <div className="text-xs text-gray-500 flex items-center space-x-1">
+              <Clock className="w-3 h-3" />
+              <span>Tạo {formatMessageTime(selectedGroup.createdAt)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Group Message Input Component
+const GroupMessageInput = () => {
+  const { selectedGroup, sendGroupMessage } = useGroupStore();
+
+  const handleSendMessage = async (messageData) => {
+    if (!selectedGroup) return;
+
+    try {
+      await sendGroupMessage(selectedGroup._id, messageData);
+    } catch (error) {
+      console.error("Error sending group message:", error);
+    }
+  };
+
+  return <MessageInputSimple onSendMessage={handleSendMessage} />;
+};
+
+export default GroupChatContainer;

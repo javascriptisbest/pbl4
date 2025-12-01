@@ -12,6 +12,7 @@
 
 export class VoiceCallManager {
   constructor(socket, userId) {
+    console.log('Initializing VoiceCallManager for user:', userId);
     this.socket = socket; // Socket.IO connection (dùng làm signaling server)
     this.userId = userId; // ID của user hiện tại
     this.peerConnection = null; // RTCPeerConnection object
@@ -113,6 +114,16 @@ export class VoiceCallManager {
         this.onCallEnded(enderId);
       }
     });
+
+    // Call failed (target not available)
+    this.socket.on("voice-call-failed", ({ error }) => {
+      console.log("Call failed:", error);
+      this.endCall();
+
+      if (this.onCallFailed) {
+        this.onCallFailed(error);
+      }
+    });
   }
 
   /**
@@ -149,6 +160,7 @@ export class VoiceCallManager {
       await this.peerConnection.setLocalDescription(offer);
 
       // Send offer via Socket.IO
+      console.log("Sending voice-call-initiate event to:", targetUserId);
       this.socket.emit("voice-call-initiate", {
         targetUserId: targetUserId,
         offer: offer,
@@ -375,6 +387,7 @@ export class VoiceCallManager {
     this.socket.off("voice-call-ice-candidate");
     this.socket.off("voice-call-rejected");
     this.socket.off("voice-call-ended");
+    this.socket.off("voice-call-failed");
   }
 
   // Event callbacks (to be set by UI components)
@@ -386,4 +399,5 @@ export class VoiceCallManager {
   onCallEnded = null; // (enderId) => {}
   onCallDisconnected = null; // () => {}
   onRemoteStream = null; // (stream) => {}
+  onCallFailed = null; // (error) => {}
 }

@@ -4,7 +4,24 @@ import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { VoiceCallManager } from "../lib/voiceCallUtils.js";
 
-const BASE_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5002";
+// Auto detect socket URL
+const getSocketURL = () => {
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+
+  const hostname = window.location.hostname;
+
+  if (hostname === "localhost" || hostname === "127.0.0.1") {
+    return "http://localhost:5002";
+  } else if (hostname.includes("vercel.app")) {
+    return "https://pbl4-jecm.onrender.com";
+  } else if (hostname.includes("onrender.com")) {
+    return "https://pbl4-jecm.onrender.com";
+  } else {
+    return "https://pbl4-jecm.onrender.com";
+  }
+};
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -116,7 +133,7 @@ export const useAuthStore = create((set, get) => ({
     const { authUser } = get();
     if (!authUser || get().socket?.connected) return;
 
-    const socket = io(BASE_URL, {
+    const socket = io(getSocketURL(), {
       query: {
         userId: authUser._id,
       },
@@ -179,7 +196,8 @@ export const useAuthStore = create((set, get) => ({
     set({ socket: socket, voiceCallManager: vcm });
 
     socket.on("getOnlineUsers", (userIds) => {
-      set({ onlineUsers: userIds });
+      const safeUserIds = Array.isArray(userIds) ? userIds : [];
+      set({ onlineUsers: safeUserIds });
     });
   },
   disconnectSocket: () => {

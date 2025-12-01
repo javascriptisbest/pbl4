@@ -101,12 +101,14 @@ export const sendMessage = async (req, res) => {
       senderId,
       receiverId,
       hasUser: !!req.user,
-      userDetails: req.user ? { id: req.user._id, email: req.user.email } : null,
+      userDetails: req.user
+        ? { id: req.user._id, email: req.user.email }
+        : null,
       hasText: !!text,
       hasImage: !!image,
       hasVideo: !!video,
       hasAudio: !!audio,
-      hasFile: !!file
+      hasFile: !!file,
     });
 
     // Validate authentication
@@ -218,7 +220,7 @@ export const sendMessage = async (req, res) => {
       hasVideo: !!videoUrl,
       hasAudio: !!audioUrl,
       hasFile: !!fileUrl,
-      mediaType
+      mediaType,
     });
 
     const newMessage = new Message({
@@ -251,7 +253,7 @@ export const sendMessage = async (req, res) => {
       receiverId,
       receiverSocketId,
       messageId: newMessage._id,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     if (receiverSocketId) {
@@ -284,10 +286,10 @@ export const sendMessage = async (req, res) => {
         .status(400)
         .json({ error: "Invalid video format. Please use MP4, AVI, or MOV." });
     } else {
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Internal server error",
         message: error.message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   }
