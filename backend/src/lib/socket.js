@@ -49,7 +49,7 @@ const io = new Server(server, {
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   },
   // Enable polling for better cloud compatibility
-  transports: ['polling', 'websocket'],
+  transports: ["polling", "websocket"],
   allowEIO3: true,
   pingTimeout: 60000,
   pingInterval: 25000,
@@ -70,12 +70,14 @@ export function getReceiverSocketId(userId) {
 export function getAllUserSockets(userId) {
   const userInfo = userSocketMap[userId];
   if (!userInfo) return [];
-  return userInfo.sessions ? userInfo.sessions.map(session => session.socketId) : [userInfo.socketId];
+  return userInfo.sessions
+    ? userInfo.sessions.map((session) => session.socketId)
+    : [userInfo.socketId];
 }
 
 /**
  * Map lưu trạng thái online của users và sessions
- * Key: userId (MongoDB ObjectId)  
+ * Key: userId (MongoDB ObjectId)
  * Value: Object with { socketId, sessions: [sessionInfo] }
  * Cho phép một user có nhiều sessions (multiple frontend instances)
  */
@@ -106,26 +108,32 @@ io.on("connection", (socket) => {
   if (userId) {
     // Lưu mapping socketId -> userId
     socketUserMap[socket.id] = userId;
-    
+
     // Xử lý multiple sessions cho same user
     if (!userSocketMap[userId]) {
       userSocketMap[userId] = {
         socketId: socket.id, // Primary socket (for backward compatibility)
-        sessions: []
+        sessions: [],
       };
     }
-    
+
     // Thêm session mới
     userSocketMap[userId].sessions.push({
       sessionId: sessionId || socket.id,
       socketId: socket.id,
-      connectedAt: new Date()
+      connectedAt: new Date(),
     });
-    
+
     // Update primary socket to latest connection
     userSocketMap[userId].socketId = socket.id;
-    
-    console.log("✅ User mapped:", userId, "->", socket.id, `(${userSocketMap[userId].sessions.length} sessions)`);
+
+    console.log(
+      "✅ User mapped:",
+      userId,
+      "->",
+      socket.id,
+      `(${userSocketMap[userId].sessions.length} sessions)`
+    );
   } else {
     console.log("⚠️ No userId in query params");
   }
@@ -140,28 +148,31 @@ io.on("connection", (socket) => {
    */
   socket.on("disconnect", () => {
     console.log("A user disconnected", socket.id);
-    
+
     const userId = socketUserMap[socket.id];
     if (userId && userSocketMap[userId]) {
       // Remove specific session
       userSocketMap[userId].sessions = userSocketMap[userId].sessions.filter(
-        session => session.socketId !== socket.id
+        (session) => session.socketId !== socket.id
       );
-      
+
       // If no sessions left, remove user completely
       if (userSocketMap[userId].sessions.length === 0) {
         delete userSocketMap[userId];
         console.log(`🚪 User ${userId} fully disconnected`);
       } else {
         // Update primary socket to remaining session
-        userSocketMap[userId].socketId = userSocketMap[userId].sessions[0].socketId;
-        console.log(`📱 User ${userId} has ${userSocketMap[userId].sessions.length} remaining sessions`);
+        userSocketMap[userId].socketId =
+          userSocketMap[userId].sessions[0].socketId;
+        console.log(
+          `📱 User ${userId} has ${userSocketMap[userId].sessions.length} remaining sessions`
+        );
       }
     }
-    
+
     // Clean up socket mapping
     delete socketUserMap[socket.id];
-    
+
     // Cập nhật lại danh sách online cho tất cả clients
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
@@ -180,13 +191,16 @@ io.on("connection", (socket) => {
     console.log(`📞 Voice call initiate from ${userId} to ${targetUserId}`);
     const targetUserInfo = userSocketMap[targetUserId];
     console.log(`🎯 Target user ${targetUserId}:`, targetUserInfo);
-    
+
     if (targetUserInfo) {
       // Gửi đến tất cả sessions của target user (multiple frontend instances)
       const targetSockets = getAllUserSockets(targetUserId);
-      console.log(`📤 Sending voice-call-incoming to ${targetSockets.length} sessions:`, targetSockets);
-      
-      targetSockets.forEach(targetSocketId => {
+      console.log(
+        `📤 Sending voice-call-incoming to ${targetSockets.length} sessions:`,
+        targetSockets
+      );
+
+      targetSockets.forEach((targetSocketId) => {
         io.to(targetSocketId).emit("voice-call-incoming", {
           callerId: userId,
           callerSocketId: socket.id,
@@ -197,7 +211,7 @@ io.on("connection", (socket) => {
       console.log(`❌ Target user ${targetUserId} not online or not found`);
       // Emit back to caller that target is not available
       socket.emit("voice-call-failed", {
-        error: "Target user is not online"
+        error: "Target user is not online",
       });
     }
   });
@@ -211,7 +225,7 @@ io.on("connection", (socket) => {
     if (callerUserInfo) {
       // Forward answer về caller (tất cả sessions)
       const callerSockets = getAllUserSockets(callerId);
-      callerSockets.forEach(callerSocketId => {
+      callerSockets.forEach((callerSocketId) => {
         io.to(callerSocketId).emit("voice-call-answered", {
           answer: answer, // SDP answer
           answererId: userId,
@@ -230,7 +244,7 @@ io.on("connection", (socket) => {
     if (targetUserInfo) {
       // Forward ICE candidate đến peer (tất cả sessions)
       const targetSockets = getAllUserSockets(targetUserId);
-      targetSockets.forEach(targetSocketId => {
+      targetSockets.forEach((targetSocketId) => {
         io.to(targetSocketId).emit("voice-call-ice-candidate", {
           candidate: candidate,
           senderId: userId,
@@ -247,7 +261,7 @@ io.on("connection", (socket) => {
     const callerUserInfo = userSocketMap[callerId];
     if (callerUserInfo) {
       const callerSockets = getAllUserSockets(callerId);
-      callerSockets.forEach(callerSocketId => {
+      callerSockets.forEach((callerSocketId) => {
         io.to(callerSocketId).emit("voice-call-rejected", {
           rejecterId: userId,
         });
@@ -263,7 +277,7 @@ io.on("connection", (socket) => {
     const targetUserInfo = userSocketMap[targetUserId];
     if (targetUserInfo) {
       const targetSockets = getAllUserSockets(targetUserId);
-      targetSockets.forEach(targetSocketId => {
+      targetSockets.forEach((targetSocketId) => {
         io.to(targetSocketId).emit("voice-call-ended", {
           enderId: userId,
         });

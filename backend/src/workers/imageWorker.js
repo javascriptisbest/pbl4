@@ -1,5 +1,5 @@
-import { parentPort, workerData } from 'worker_threads';
-import fs from 'fs/promises';
+import { parentPort, workerData } from "worker_threads";
+import fs from "fs/promises";
 
 // Image processing worker for CPU-intensive tasks
 // Using browser-image-compression since sharp requires native compilation
@@ -10,19 +10,19 @@ class ImageProcessor {
       // In production, you would use sharp or similar library
       const data = await fs.readFile(inputPath);
       await fs.writeFile(outputPath, data);
-      
+
       return {
         success: true,
         stats: {
           size: data.length,
-          format: 'processed'
+          format: "processed",
         },
-        outputPath
+        outputPath,
       };
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -32,27 +32,27 @@ class ImageProcessor {
     // In production, use ffmpeg or similar
     return {
       success: true,
-      message: 'Video compression not implemented yet'
+      message: "Video compression not implemented yet",
     };
   }
 }
 
 // Worker message handler
 if (parentPort) {
-  parentPort.on('message', async (data) => {
+  parentPort.on("message", async (data) => {
     const { task, payload, id } = data;
-    
+
     let result;
     try {
       switch (task) {
-        case 'processImage':
+        case "processImage":
           result = await ImageProcessor.processImage(
             payload.inputPath,
             payload.outputPath,
             payload.options
           );
           break;
-        case 'compressVideo':
+        case "compressVideo":
           result = await ImageProcessor.compressVideo(
             payload.inputPath,
             payload.outputPath,
@@ -60,15 +60,15 @@ if (parentPort) {
           );
           break;
         default:
-          result = { success: false, error: 'Unknown task' };
+          result = { success: false, error: "Unknown task" };
       }
-      
+
       parentPort.postMessage({ id, success: true, result });
     } catch (error) {
-      parentPort.postMessage({ 
-        id, 
-        success: false, 
-        error: error.message 
+      parentPort.postMessage({
+        id,
+        success: false,
+        error: error.message,
       });
     }
   });

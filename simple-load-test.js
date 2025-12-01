@@ -5,7 +5,8 @@
 
 import { io } from "socket.io-client";
 
-const SERVER_URL = "http://localhost:5002";
+// Auto-detect server URL
+const SERVER_URL = process.argv[2] || "http://localhost:5002";
 const NUM_USERS = 10; // Chỉ 10 users
 const MESSAGES_PER_USER = 50; // 5 messages/user = 50 messages total
 

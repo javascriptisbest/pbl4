@@ -6,7 +6,8 @@
 import os from "os";
 import { io } from "socket.io-client";
 
-const SERVER_URL = "http://localhost:5002";
+// Server URL with fallback
+const SERVER_URL = process.env.SERVER_URL || "http://localhost:5002";
 const MONITOR_INTERVAL = 1000; // 1 giây
 
 class PerformanceMonitor {

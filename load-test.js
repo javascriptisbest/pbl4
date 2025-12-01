@@ -9,7 +9,19 @@
 import { io } from "socket.io-client";
 import axios from "axios";
 
-const SERVER_URL = "http://localhost:5002";
+// Auto-detect server URL
+const getServerURL = () => {
+  // Check for command line argument
+  const urlArg = process.argv.find((arg) => arg.startsWith("--url="));
+  if (urlArg) {
+    return urlArg.split("=")[1];
+  }
+
+  // Default to localhost for load testing
+  return "http://localhost:5002";
+};
+
+const SERVER_URL = getServerURL();
 const NUM_USERS = 100; // Test với 100 users
 const MESSAGES_PER_USER = 10;
 const GROUP_ID = "test-group-id"; // Thay bằng group ID thật
