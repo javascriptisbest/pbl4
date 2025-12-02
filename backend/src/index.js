@@ -252,6 +252,24 @@ if (
     })
   );
 
+  // ===== ROOT ENDPOINT =====
+  app.get("/", (req, res) => {
+    res.status(200).json({
+      message: "🚀 TalkSpace Backend API is running!",
+      status: "active",
+      version: "1.0.0",
+      endpoints: {
+        health: "/api/health",
+        auth: "/api/auth/*",
+        messages: "/api/messages/*", 
+        groups: "/api/groups/*",
+        images: "/api/images/*"
+      },
+      documentation: "https://github.com/javascriptisbest/pbl4",
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // ===== HEALTH CHECK ENDPOINT =====
   app.get("/api/health", (req, res) => {
     const healthcheck = {

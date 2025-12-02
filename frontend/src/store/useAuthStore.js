@@ -117,7 +117,7 @@ export const useAuthStore = create((set, get) => ({
     if (!authUser || get().socket?.connected) return;
 
     // Force clear any cached URLs for fresh detection
-    if (typeof window !== 'undefined' && window.clearURLCache) {
+    if (typeof window !== "undefined" && window.clearURLCache) {
       window.clearURLCache();
     }
 
@@ -125,7 +125,7 @@ export const useAuthStore = create((set, get) => ({
     console.log("🔌 Auth socket connecting to:", socketURL, {
       location: window?.location?.href,
       timestamp: Date.now(),
-      version: 'auth-v2.1'
+      version: "auth-v2.1",
     });
 
     const socket = io(socketURL, {

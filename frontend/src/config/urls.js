@@ -13,7 +13,7 @@ export const PRODUCTION_URLS = {
 export const LOCAL_URLS = {
   // Local development URLs
   BACKEND_URL: "http://localhost:5002",
-  SOCKET_URL: "http://localhost:5002", 
+  SOCKET_URL: "http://localhost:5002",
   FRONTEND_URL: "http://localhost:5174",
 };
 
@@ -22,7 +22,7 @@ let urlCache = null;
 const CACHE_DURATION = 10000; // 10 seconds
 
 // Global cache clear function
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.clearURLCache = () => {
     urlCache = null;
     console.log("🗑️ URL cache cleared manually");
@@ -32,9 +32,9 @@ if (typeof window !== 'undefined') {
 // Function để get backend URL
 export const getBackendURL = () => {
   const now = Date.now();
-  
+
   // Use cache if recent
-  if (urlCache && (now - urlCache.timestamp) < CACHE_DURATION) {
+  if (urlCache && now - urlCache.timestamp < CACHE_DURATION) {
     console.log("🔄 Using cached backend URL:", urlCache.backend);
     return urlCache.backend;
   }
@@ -45,7 +45,7 @@ export const getBackendURL = () => {
   console.log("🌐 Fresh backend URL detection:", { hostname, href });
 
   let backendURL;
-  
+
   // Local development (localhost, 127.0.0.1, local IP)
   if (
     hostname === "localhost" ||
@@ -60,23 +60,27 @@ export const getBackendURL = () => {
     backendURL = PRODUCTION_URLS.BACKEND_URL;
     console.log("✅ Using production backend:", backendURL);
   }
-  
+
   // Update cache
-  urlCache = { 
+  urlCache = {
     timestamp: now,
     backend: backendURL,
-    socket: null // Will be set by getSocketURL
+    socket: null, // Will be set by getSocketURL
   };
-  
+
   return backendURL;
 };
 
 // Function để get socket URL
 export const getSocketURL = () => {
   const now = Date.now();
-  
+
   // Use cached value if available and recent
-  if (urlCache && urlCache.socket && (now - urlCache.timestamp) < CACHE_DURATION) {
+  if (
+    urlCache &&
+    urlCache.socket &&
+    now - urlCache.timestamp < CACHE_DURATION
+  ) {
     console.log("🔄 Using cached socket URL:", urlCache.socket);
     return urlCache.socket;
   }
@@ -86,13 +90,13 @@ export const getSocketURL = () => {
   const origin = window?.location?.origin || "";
   const protocol = window?.location?.protocol || "";
 
-  console.log("🔌 Fresh socket URL detection:", { 
-    hostname, 
-    href, 
+  console.log("🔌 Fresh socket URL detection:", {
+    hostname,
+    href,
     origin,
     protocol,
     timestamp: now,
-    userAgent: navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other'
+    userAgent: navigator.userAgent.includes("Chrome") ? "Chrome" : "Other",
   });
 
   let socketURL;
@@ -119,7 +123,7 @@ export const getSocketURL = () => {
     urlCache.socket = socketURL;
     urlCache.timestamp = now;
   }
-  
+
   console.log("💾 Updated socket cache:", urlCache);
   return socketURL;
 };

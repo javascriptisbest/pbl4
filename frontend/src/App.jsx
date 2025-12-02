@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 
-import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
@@ -50,9 +49,7 @@ const App = () => {
       className="h-screen overflow-hidden"
       style={{ background: "var(--bg-primary)" }}
     >
-      <Navbar />
-
-      <main className="h-full pt-16">
+      <main className="h-full">
         <Routes>
           <Route
             path="/"

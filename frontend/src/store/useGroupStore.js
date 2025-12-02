@@ -18,13 +18,13 @@ export const useGroupStore = create((set, get) => ({
 
     // Kiểm tra cache trước
     const { groupsCache, groupsCacheTime, isGroupsLoading } = get();
-    
+
     // Prevent duplicate loading
     if (isGroupsLoading && !forceRefresh) {
       console.log("⏳ Groups already loading, skipping duplicate request");
       return;
     }
-    
+
     if (
       !forceRefresh &&
       groupsCache &&

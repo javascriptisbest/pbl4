@@ -2,7 +2,7 @@ import { MessageCircle } from "lucide-react";
 
 const NoChatSelected = () => {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center min-w-0 -mt-16 pt-16">
+    <div className="flex-1 flex flex-col items-center justify-center min-w-0">
       <div className="text-center max-w-md">
         <div
           className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg transition-all duration-300"

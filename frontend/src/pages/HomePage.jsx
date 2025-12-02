@@ -3,6 +3,7 @@ import { useChatStore } from "../store/useChatStore";
 import { useGroupStore } from "../store/useGroupStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { getSocketURL } from "../config/urls.js";
+import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import NoChatSelected from "../components/NoChatSelected";
 import ChatContainer from "../components/ChatContainer";
@@ -33,13 +34,13 @@ const HomePage = () => {
     // Preload users and groups for instant sidebar switching
     const preloadData = measureAsync("preloadChatData", async () => {
       console.log("🚀 HomePage: Preloading chat data...");
-      
-      // Load users if not already loaded  
+
+      // Load users if not already loaded
       if (!users.length) {
         console.log("👥 Loading users...");
         await getUsers();
       }
-      
+
       // Load groups if not already loaded
       if (!groups.length) {
         console.log("👥 Loading groups...");
@@ -56,7 +57,7 @@ const HomePage = () => {
       console.log("🌐 Voice call socket URL:", socketURL, {
         location: window?.location?.href,
         timestamp: Date.now(),
-        version: 'voice-v2.1'
+        version: "voice-v2.1",
       });
 
       const socket = io(socketURL, {
@@ -163,7 +164,14 @@ const HomePage = () => {
         window.voiceCallManager = null;
       }
     };
-  }, [authUser, selectedUser, getUsers, getGroups, users.length, groups.length]);
+  }, [
+    authUser,
+    selectedUser,
+    getUsers,
+    getGroups,
+    users.length,
+    groups.length,
+  ]);
 
   const handleCloseCallModal = () => {
     console.log("❌ Closing call modal");
@@ -181,15 +189,18 @@ const HomePage = () => {
   };
 
   return (
-    <div className="h-screen pt-16">
-      <div className="h-[calc(100vh-4rem)]">
+    <div className="h-screen">
+      <Navbar />
+      <div className="h-full pt-16">
         <div className="bg-white w-full h-full">
           <div className="flex h-full overflow-hidden">
             <Sidebar />
 
-            {!selectedUser && !selectedGroup && <NoChatSelected />}
-            {selectedUser && <ChatContainer />}
-            {selectedGroup && <GroupChatContainer />}
+            <div className="flex-1 flex flex-col min-w-0">
+              {!selectedUser && !selectedGroup && <NoChatSelected />}
+              {selectedUser && <ChatContainer />}
+              {selectedGroup && <GroupChatContainer />}
+            </div>
           </div>
         </div>
       </div>
