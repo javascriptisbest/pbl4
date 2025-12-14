@@ -24,27 +24,63 @@ export const useChatStore = create((set, get) => ({
 
   // Set selected user with immediate cache check
   setSelectedUser: (user) => {
-    const { messagesCache } = get();
+    const { messagesCache, markAsRead, users, getMessages } = get();
     const userId = user?._id;
 
     set({ selectedUser: user });
 
+    if (!userId) return;
+
     // If we have cached messages for this user, show them immediately
-    if (userId && messagesCache[userId]) {
-      const cached = messagesCache[userId];
+    const cached = messagesCache[userId];
+    if (cached) {
       const cacheAge = Date.now() - cached.timestamp;
 
       // Use cache if less than 2 minutes old
       if (cacheAge < 2 * 60 * 1000) {
-        console.log(`💬 Using cached messages for user ${userId}`);
+        console.log(`💬 Using cached messages for user ${userId} (${cached.preloadLevel || 'full'})`);
         set({ messages: cached.messages });
-        return;
+        
+        // Nếu chỉ là preview (5 tin), load thêm tin nhắn trong background
+        if (cached.preloadLevel === "preview" || cached.hasMore) {
+          console.log("🔄 Loading more messages in background...");
+          getMessages(userId, true); // Force refresh để load full
+        }
+      } else {
+        // Cache expired, reload
+        set({ messages: cached.messages }); // Show stale data first
+        getMessages(userId, true);
       }
+    } else {
+      // No cache, load fresh
+      set({ messages: [] });
+      getMessages(userId);
     }
 
-    // Clear messages if no cache or cache is stale
-    if (userId) {
-      set({ messages: [] });
+    // Mark messages as read khi mở conversation
+    const userInList = users.find(u => u._id === userId);
+    if (userInList?.unreadCount > 0) {
+      markAsRead(userId);
+    }
+  },
+  
+  // Đánh dấu tin nhắn đã đọc
+  markAsRead: async (userId) => {
+    try {
+      await axiosInstance.post(`/messages/read/${userId}`);
+      
+      // Cập nhật unreadCount trong users list
+      const { users } = get();
+      const updatedUsers = users.map(user => 
+        user._id === userId 
+          ? { ...user, unreadCount: 0 }
+          : user
+      );
+      set({ users: updatedUsers });
+      
+      console.log(`✅ Marked messages from ${userId} as read`);
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
     }
   },
 
@@ -79,6 +115,9 @@ export const useChatStore = create((set, get) => ({
       });
 
       console.log(`👥 Users loaded in ${Date.now() - startTime}ms`);
+      
+      // Preload messages sau khi load users (background)
+      get().preloadMessages();
     } catch (error) {
       console.error("Error loading users:", error);
       // Fallback to cache nếu có lỗi network
@@ -92,6 +131,49 @@ export const useChatStore = create((set, get) => ({
       }
     } finally {
       set({ isUsersLoading: false });
+    }
+  },
+  
+  // Preload messages cho tất cả users (background)
+  // Top 5: 50 tin, còn lại: 5 tin
+  preloadMessages: async () => {
+    const { messagesCache } = get();
+    
+    // Nếu đã có cache, không preload lại
+    if (Object.keys(messagesCache).length > 0) {
+      console.log("📋 Messages already cached, skipping preload");
+      return;
+    }
+    
+    try {
+      console.log("🔄 Preloading messages...");
+      const startTime = Date.now();
+      
+      const res = await axiosInstance.get("/messages/preload");
+      const preloadedData = res.data;
+      
+      // Merge vào cache
+      const newCache = {};
+      for (const [userId, data] of Object.entries(preloadedData)) {
+        newCache[userId] = {
+          messages: data.messages,
+          timestamp: Date.now(),
+          hasMore: data.hasMore,
+          preloadLevel: data.preloadLevel,
+        };
+      }
+      
+      set({ messagesCache: { ...messagesCache, ...newCache } });
+      
+      const fullCount = Object.values(preloadedData).filter(d => d.preloadLevel === "full").length;
+      const previewCount = Object.values(preloadedData).filter(d => d.preloadLevel === "preview").length;
+      
+      console.log(`✅ Preloaded messages in ${Date.now() - startTime}ms`);
+      console.log(`   📬 Full (50 msgs): ${fullCount} users`);
+      console.log(`   📩 Preview (5 msgs): ${previewCount} users`);
+    } catch (error) {
+      console.error("Error preloading messages:", error);
+      // Không show toast vì đây là background operation
     }
   },
 
@@ -236,8 +318,41 @@ export const useChatStore = create((set, get) => ({
         : [...withoutTemp, res.data];
 
       // Update both current messages and cache
+      const { users } = get();
+      
+      // Cập nhật lastMessage trong sidebar
+      const updatedUsers = users.map(user => {
+        if (user._id === selectedUser._id) {
+          return {
+            ...user,
+            lastMessage: {
+              text: res.data.text,
+              image: res.data.image,
+              video: res.data.video,
+              audio: res.data.audio,
+              file: res.data.file,
+              senderId: res.data.senderId,
+              createdAt: res.data.createdAt,
+            },
+          };
+        }
+        return user;
+      });
+      
+      // Sắp xếp lại: người vừa chat lên đầu
+      updatedUsers.sort((a, b) => {
+        const timeA = a.lastMessage?.createdAt
+          ? new Date(a.lastMessage.createdAt).getTime()
+          : 0;
+        const timeB = b.lastMessage?.createdAt
+          ? new Date(b.lastMessage.createdAt).getTime()
+          : 0;
+        return timeB - timeA;
+      });
+      
       set({
         messages: newMessages,
+        users: updatedUsers,
         messagesCache: {
           ...messagesCache,
           [selectedUser._id]: {
@@ -322,16 +437,49 @@ export const useChatStore = create((set, get) => ({
       const isFromSelectedConversation =
         selectedUser && (sId === selId || rId === selId);
 
-      if (!selectedUser || !isMessageForMe || !isFromSelectedConversation) {
-        console.log("🚫 Message filtered out:", {
-          hasSelectedUser: !!selectedUser,
-          isForMe: isMessageForMe,
-          isFromConversation: isFromSelectedConversation,
-          selId,
-          sId,
-          rId,
-          meId,
+      if (!isMessageForMe) {
+        console.log("🚫 Message not for me, ignoring");
+        return;
+      }
+
+      // Nếu tin nhắn không thuộc conversation đang mở
+      // -> Cập nhật unreadCount và lastMessage trong sidebar
+      if (!selectedUser || !isFromSelectedConversation) {
+        console.log("📬 New message from different conversation, updating sidebar");
+        
+        // Cập nhật users list với unreadCount + 1 và lastMessage mới
+        const { users } = get();
+        const updatedUsers = users.map(user => {
+          if (user._id === sId) {
+            return {
+              ...user,
+              unreadCount: (user.unreadCount || 0) + 1,
+              lastMessage: {
+                text: newMessage.text,
+                image: newMessage.image,
+                video: newMessage.video,
+                audio: newMessage.audio,
+                file: newMessage.file,
+                senderId: newMessage.senderId,
+                createdAt: newMessage.createdAt,
+              },
+            };
+          }
+          return user;
         });
+        
+        // Sắp xếp lại: người vừa gửi tin lên đầu
+        updatedUsers.sort((a, b) => {
+          const timeA = a.lastMessage?.createdAt
+            ? new Date(a.lastMessage.createdAt).getTime()
+            : 0;
+          const timeB = b.lastMessage?.createdAt
+            ? new Date(b.lastMessage.createdAt).getTime()
+            : 0;
+          return timeB - timeA;
+        });
+        
+        set({ users: updatedUsers });
         return;
       }
 
@@ -369,6 +517,26 @@ export const useChatStore = create((set, get) => ({
 
     // Listen for message reactions
     socket.on("messageReaction", (updatedMessage) => {
+      const { messages, messagesCache, selectedUser } = get();
+      const updatedMessages = messages.map((msg) =>
+        msg._id === updatedMessage._id ? updatedMessage : msg
+      );
+      
+      set({
+        messages: updatedMessages,
+        messagesCache: selectedUser ? {
+          ...messagesCache,
+          [selectedUser._id]: {
+            ...messagesCache[selectedUser._id],
+            messages: updatedMessages,
+            timestamp: Date.now(),
+          },
+        } : messagesCache,
+      });
+    });
+
+    // Listen for message edits
+    socket.on("messageEdited", (updatedMessage) => {
       set({
         messages: get().messages.map((msg) =>
           msg._id === updatedMessage._id ? updatedMessage : msg
@@ -391,22 +559,72 @@ export const useChatStore = create((set, get) => ({
     socket.off("newMessage");
     socket.off("messageReaction");
     socket.off("messageDeleted");
+    socket.off("messageEdited");
   },
 
   addReaction: async (messageId, emoji) => {
     try {
-      await axiosInstance.post(`/messages/reaction/${messageId}`, { emoji });
+      const res = await axiosInstance.post(`/messages/reaction/${messageId}`, { emoji });
+      const updatedMessage = res.data;
+      
+      // Cập nhật message trong state ngay lập tức
+      const { messages, messagesCache, selectedUser } = get();
+      const updatedMessages = messages.map((msg) =>
+        msg._id === updatedMessage._id ? updatedMessage : msg
+      );
+      
+      set({
+        messages: updatedMessages,
+        messagesCache: selectedUser ? {
+          ...messagesCache,
+          [selectedUser._id]: {
+            ...messagesCache[selectedUser._id],
+            messages: updatedMessages,
+            timestamp: Date.now(),
+          },
+        } : messagesCache,
+      });
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to add reaction");
+      throw error;
     }
   },
 
   deleteMessage: async (messageId) => {
     try {
       await axiosInstance.delete(`/messages/${messageId}`);
-      toast.success("Message deleted");
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to delete message");
+      throw error;
+    }
+  },
+
+  editMessage: async (messageId, newText) => {
+    try {
+      const res = await axiosInstance.put(`/messages/${messageId}`, { text: newText });
+      
+      // Cập nhật message trong state
+      const { messages, messagesCache, selectedUser } = get();
+      const updatedMessages = messages.map((msg) =>
+        msg._id === messageId ? { ...msg, text: newText, isEdited: true } : msg
+      );
+      
+      set({
+        messages: updatedMessages,
+        messagesCache: selectedUser ? {
+          ...messagesCache,
+          [selectedUser._id]: {
+            ...messagesCache[selectedUser._id],
+            messages: updatedMessages,
+            timestamp: Date.now(),
+          },
+        } : messagesCache,
+      });
+      
+      return res.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to edit message");
+      throw error;
     }
   },
 }));

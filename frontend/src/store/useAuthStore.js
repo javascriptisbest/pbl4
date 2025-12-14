@@ -239,6 +239,16 @@ export const useAuthStore = create((set, get) => ({
       const safeUserIds = Array.isArray(userIds) ? userIds : [];
       set({ onlineUsers: safeUserIds });
     });
+
+    // Listen for friend accepted event - tự động refresh danh sách bạn bè
+    socket.on("friendAccepted", (data) => {
+      console.log("✅ Friend accepted event received:", data);
+      
+      // Refresh danh sách users trong chat store để bạn mới hiện ngay
+      import("../store/useChatStore.js").then((module) => {
+        module.useChatStore.getState().getUsers(true); // forceRefresh = true
+      });
+    });
   },
   disconnectSocket: () => {
     const s = get().socket;
