@@ -7,7 +7,10 @@ import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 
 import cloudinary from "../lib/cloudinary.js";
-import { getReceiverSocketId, io } from "../lib/socket.js";
+import {
+  getReceiverSocketId,
+  emitToSocket,
+} from "../lib/websocketServer.js";
 
 /**
  * GET /api/messages/users
@@ -257,7 +260,7 @@ export const sendMessage = async (req, res) => {
     });
 
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", newMessage);
+      emitToSocket(receiverSocketId, "newMessage", newMessage);
       console.log("📤 Message broadcasted to:", receiverSocketId);
     } else {
       console.log("❌ Receiver not found online:", receiverId);
@@ -344,10 +347,10 @@ export const addReaction = async (req, res) => {
     const updatedMessage = await Message.findById(messageId);
 
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("messageReaction", updatedMessage);
+      emitToSocket(receiverSocketId, "messageReaction", updatedMessage);
     }
     if (senderSocketId && senderSocketId !== receiverSocketId) {
-      io.to(senderSocketId).emit("messageReaction", updatedMessage);
+      emitToSocket(senderSocketId, "messageReaction", updatedMessage);
     }
 
     res.status(200).json(updatedMessage);
@@ -397,10 +400,10 @@ export const deleteMessage = async (req, res) => {
     const senderSocketId = getReceiverSocketId(message.senderId);
 
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("messageDeleted", message);
+      emitToSocket(receiverSocketId, "messageDeleted", message);
     }
     if (senderSocketId && senderSocketId !== receiverSocketId) {
-      io.to(senderSocketId).emit("messageDeleted", message);
+      emitToSocket(senderSocketId, "messageDeleted", message);
     }
 
     res.status(200).json({ message: "Message deleted successfully" });

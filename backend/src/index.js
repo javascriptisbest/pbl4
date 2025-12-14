@@ -17,7 +17,7 @@ import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import imageRoutes from "./routes/image.route.js";
 import groupRoutes from "./routes/group.route.js";
-import { app, server } from "./lib/socket.js";
+import { app, server } from "./lib/websocketServer.js";
 
 dotenv.config();
 

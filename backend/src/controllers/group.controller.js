@@ -14,7 +14,11 @@ import Group from "../models/group.model.js";
 import Message from "../models/message.model.js";
 import User from "../models/user.model.js";
 import cloudinary from "../lib/cloudinary.js";
-import { getReceiverSocketId, io } from "../lib/socket.js";
+import {
+  getReceiverSocketId,
+  getAllUserSockets,
+  emitToSocket,
+} from "../lib/websocketServer.js";
 
 /**
  * POST /api/groups
@@ -63,7 +67,7 @@ export const createGroup = async (req, res) => {
     members.forEach((member) => {
       const socketId = getReceiverSocketId(member.userId);
       if (socketId) {
-        io.to(socketId).emit("newGroup", group);
+        emitToSocket(socketId, "newGroup", group);
       }
     });
 
@@ -230,7 +234,7 @@ export const sendGroupMessage = async (req, res) => {
 
       const socketId = getReceiverSocketId(member.userId);
       if (socketId) {
-        io.to(socketId).emit("newGroupMessage", newMessage);
+        emitToSocket(socketId, "newGroupMessage", newMessage);
       }
     });
 
@@ -276,7 +280,7 @@ export const addGroupMember = async (req, res) => {
     // Notify new member
     const socketId = getReceiverSocketId(userId);
     if (socketId) {
-      io.to(socketId).emit("addedToGroup", group);
+      emitToSocket(socketId, "addedToGroup", group);
     }
 
     res.status(200).json(group);

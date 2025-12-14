@@ -11,7 +11,7 @@ import GroupChatContainer from "../components/GroupChatContainer";
 import VoiceCallModal from "../components/VoiceCallModal";
 import { VoiceCallManager } from "../lib/voiceCallUtils";
 import { measureAsync } from "../lib/performanceMonitor";
-import { io } from "socket.io-client";
+import { createWebSocket } from "../lib/websocketClient.js";
 import toast from "react-hot-toast";
 
 const HomePage = () => {
@@ -60,9 +60,8 @@ const HomePage = () => {
         version: "voice-v2.1",
       });
 
-      const socket = io(socketURL, {
+      const socket = createWebSocket(socketURL, {
         query: { userId: authUser._id },
-        transports: ["websocket"], // WebSocket only - matches server config
         forceNew: true, // Force new connection
       });
 

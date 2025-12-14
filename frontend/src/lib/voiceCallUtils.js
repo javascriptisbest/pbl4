@@ -4,7 +4,7 @@
  *
  * WebRTC Flow:
  * 1. Caller tạo offer (SDP)
- * 2. Gửi offer qua Signaling Server (Socket.IO) đến Callee
+ * 2. Gửi offer qua Signaling Server (WebSocket/TCP) đến Callee
  * 3. Callee tạo answer (SDP) và gửi lại
  * 4. Trao đổi ICE candidates để tìm đường kết nối tốt nhất
  * 5. Establish P2P connection và stream audio
@@ -13,7 +13,7 @@
 export class VoiceCallManager {
   constructor(socket, userId) {
     console.log("Initializing VoiceCallManager for user:", userId);
-    this.socket = socket; // Socket.IO connection (dùng làm signaling server)
+    this.socket = socket; // WebSocket connection (dùng làm signaling server)
     this.userId = userId; // ID của user hiện tại
     this.peerConnection = null; // RTCPeerConnection object
     this.localStream = null; // MediaStream từ microphone
@@ -40,7 +40,7 @@ export class VoiceCallManager {
   }
 
   /**
-   * Setup Socket.IO Event Listeners
+   * Setup WebSocket Event Listeners
    * Lắng nghe các signaling events từ server
    */
   setupSocketListeners() {
@@ -159,7 +159,7 @@ export class VoiceCallManager {
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
 
-      // Send offer via Socket.IO
+      // Send offer via WebSocket
       console.log("Sending voice-call-initiate event to:", targetUserId);
       this.socket.emit("voice-call-initiate", {
         targetUserId: targetUserId,

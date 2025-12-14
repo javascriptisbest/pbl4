@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
-import { io } from "socket.io-client";
+import { createWebSocket } from "../lib/websocketClient.js";
 import { VoiceCallManager } from "../lib/voiceCallUtils.js";
 
 import { getSocketURL } from "../config/urls.js";
@@ -137,12 +137,10 @@ export const useAuthStore = create((set, get) => ({
       version: "auth-v3.0",
     });
 
-    const socket = io(socketURL, {
+    const socket = createWebSocket(socketURL, {
       query: {
         userId: authUser._id,
       },
-      transports: ["websocket"], // WebSocket only - no polling
-      forceNew: true,
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
