@@ -107,11 +107,12 @@ const MessageInputSimple = ({ onSendMessage }) => {
       if (onSendMessage) {
         await onSendMessage(messageData);
       } else {
-        sendMessage(messageData);
+        await sendMessage(messageData);
       }
     } catch (error) {
-      toast.error("Failed to send message");
-      console.error(error);
+      // Error is already handled in sendMessage, but log it here for debugging
+      console.error("Error in handleSendMessage:", error);
+      // Don't show duplicate error toast - sendMessage already shows it
     }
   };
 

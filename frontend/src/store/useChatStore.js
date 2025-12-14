@@ -155,9 +155,37 @@ export const useChatStore = create((set, get) => ({
     const { selectedUser, messages } = get();
     const authUser = useAuthStore.getState().authUser;
 
+    // Validation: Kiểm tra các điều kiện cần thiết
+    if (!authUser) {
+      toast.error("Please login to send messages");
+      console.error("❌ sendMessage: No authenticated user");
+      return;
+    }
+
+    if (!selectedUser || !selectedUser._id) {
+      toast.error("Please select a user to chat with");
+      console.error("❌ sendMessage: No selected user", { selectedUser });
+      return;
+    }
+
+    // Validate message content
+    if (
+      !messageData.text &&
+      !messageData.image &&
+      !messageData.video &&
+      !messageData.audio &&
+      !messageData.file
+    ) {
+      toast.error("Message content is required");
+      console.error("❌ sendMessage: No message content");
+      return;
+    }
+
     // Helper function: Chuẩn hóa ID (ObjectId vs string)
     const toId = (v) =>
       typeof v === "object" && v?._id ? String(v._id) : String(v);
+
+    const receiverId = toId(selectedUser._id);
 
     // Optimistic UI Update: Tạo message tạm để hiển thị ngay
     const tempMessage = {
@@ -176,7 +204,7 @@ export const useChatStore = create((set, get) => ({
         fullName: authUser.fullName,
         profilePic: authUser.profilePic,
       },
-      receiverId: toId(selectedUser._id),
+      receiverId: receiverId,
       createdAt: new Date().toISOString(),
       isPending: true, // Flag để biết đây là pending message
     };
@@ -187,7 +215,7 @@ export const useChatStore = create((set, get) => ({
     // Gửi request lên server trong background
     try {
       const res = await axiosInstance.post(
-        `/messages/send/${selectedUser._id}`,
+        `/messages/send/${receiverId}`,
         messageData
       );
 
@@ -223,7 +251,44 @@ export const useChatStore = create((set, get) => ({
       set({
         messages: get().messages.filter((msg) => msg._id !== tempMessage._id),
       });
-      toast.error(error.response?.data?.message || "Failed to send message");
+      
+      // Better error handling with specific error messages
+      let errorMessage = "Failed to send message";
+      
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        if (status === 401) {
+          errorMessage = "Authentication failed. Please login again";
+          // Optionally redirect to login
+          console.error("❌ Authentication error, clearing auth state");
+        } else if (status === 400) {
+          errorMessage = data?.message || data?.error || "Invalid message data";
+        } else if (status === 404) {
+          errorMessage = "User not found";
+        } else if (status === 500) {
+          errorMessage = "Server error. Please try again later";
+        } else {
+          errorMessage = data?.message || data?.error || errorMessage;
+        }
+        
+        console.error("❌ Send message error:", {
+          status,
+          message: data?.message || data?.error,
+          data,
+        });
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = "Network error. Please check your connection";
+        console.error("❌ Network error:", error.message);
+      } else {
+        // Something else happened
+        console.error("❌ Send message error:", error.message);
+      }
+      
+      toast.error(errorMessage);
     }
   },
 

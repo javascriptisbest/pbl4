@@ -62,12 +62,16 @@ const HomePage = () => {
 
       const socket = io(socketURL, {
         query: { userId: authUser._id },
-        transports: ["polling", "websocket"],
+        transports: ["websocket"], // WebSocket only - matches server config
         forceNew: true, // Force new connection
       });
 
       socket.on("connect", () => {
         console.log("✅ Voice call socket connected");
+      });
+
+      socket.on("connect_error", (error) => {
+        console.error("❌ Voice call socket connection error:", error.message);
       });
 
       // Initialize voice call manager

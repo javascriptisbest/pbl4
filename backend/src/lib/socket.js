@@ -48,11 +48,14 @@ const io = new Server(server, {
     credentials: true, // Cho phép gửi cookies
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   },
-  // Enable polling for better cloud compatibility
-  transports: ["polling", "websocket"],
+  // Use WebSocket only to avoid polling session issues
+  transports: ["websocket"],
   allowEIO3: true,
   pingTimeout: 60000,
   pingInterval: 25000,
+  connectTimeout: 45000,
+  // Disable HTTP long-polling to prevent 400 errors from stale sessions
+  allowUpgrades: false,
 });
 
 /**

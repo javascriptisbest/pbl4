@@ -114,7 +114,16 @@ export const useAuthStore = create((set, get) => ({
 
   connectSocket: () => {
     const { authUser } = get();
-    if (!authUser || get().socket?.connected) return;
+    if (!authUser) return;
+
+    // Disconnect existing socket first to prevent conflicts
+    const existingSocket = get().socket;
+    if (existingSocket) {
+      console.log("🔄 Disconnecting existing socket before reconnecting...");
+      existingSocket.removeAllListeners();
+      existingSocket.disconnect();
+      set({ socket: null });
+    }
 
     // Force clear any cached URLs for fresh detection
     if (typeof window !== "undefined" && window.clearURLCache) {
@@ -125,16 +134,52 @@ export const useAuthStore = create((set, get) => ({
     console.log("🔌 Auth socket connecting to:", socketURL, {
       location: window?.location?.href,
       timestamp: Date.now(),
-      version: "auth-v2.1",
+      version: "auth-v3.0",
     });
 
     const socket = io(socketURL, {
       query: {
         userId: authUser._id,
       },
-      transports: ["polling", "websocket"],
-      forceNew: true, // Force new connection
+      transports: ["websocket"], // WebSocket only - no polling
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      autoConnect: false, // We'll connect manually
     });
+
+    // Error handling
+    socket.on("connect_error", (error) => {
+      console.error("❌ Socket connection error:", error.message);
+    });
+
+    socket.on("reconnect_attempt", (attemptNumber) => {
+      console.log(`🔄 Socket reconnection attempt ${attemptNumber}`);
+    });
+
+    socket.on("reconnect", (attemptNumber) => {
+      console.log(`✅ Socket reconnected after ${attemptNumber} attempts`);
+    });
+
+    socket.on("reconnect_failed", () => {
+      console.error("❌ Socket reconnection failed");
+    });
+
+    socket.on("connect", () => {
+      console.log("✅ Socket connected successfully, ID:", socket.id);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("📴 Socket disconnected:", reason);
+      if (reason === "io server disconnect") {
+        // Server disconnected, try to reconnect
+        socket.connect();
+      }
+    });
+
     socket.connect();
 
     // instantiate voice call manager and wire incoming call -> open modal
@@ -208,6 +253,10 @@ export const useAuthStore = create((set, get) => ({
       }
       set({ voiceCallManager: null });
     }
-    if (s?.connected) s.disconnect();
+    if (s) {
+      s.removeAllListeners();
+      s.disconnect();
+      set({ socket: null, onlineUsers: [] });
+    }
   },
 }));
