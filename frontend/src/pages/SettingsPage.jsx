@@ -1,9 +1,34 @@
 import { useThemeStore } from "../store/useThemeStore";
 import { THEMES } from "../constants";
-import { Check } from "lucide-react";
+import { Check, Bell, BellOff } from "lucide-react";
+import { notificationManager } from "../lib/notifications.js";
+import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 
 const SettingsPage = () => {
   const { theme, setTheme } = useThemeStore();
+  const [notificationEnabled, setNotificationEnabled] = useState(
+    Notification.permission === "granted"
+  );
+
+  useEffect(() => {
+    setNotificationEnabled(Notification.permission === "granted");
+  }, []);
+
+  const handleNotificationToggle = async () => {
+    if (Notification.permission === "granted") {
+      toast.info("Để tắt notification, vui lòng vào Settings của browser");
+    } else {
+      const granted = await notificationManager.requestPermission();
+      if (granted) {
+        setNotificationEnabled(true);
+        toast.success("Đã bật thông báo");
+      } else {
+        setNotificationEnabled(false);
+        toast.error("Cần cho phép thông báo để nhận tin nhắn");
+      }
+    }
+  };
 
   // Theme preview colors
   const themePreview = {
@@ -151,6 +176,59 @@ const SettingsPage = () => {
             >
               💡 Giao diện sẽ thay đổi ngay lập tức khi bạn chọn theme mới
             </p>
+          </div>
+        </div>
+
+        {/* Notification Settings */}
+        <div
+          className="rounded-xl p-6 shadow-sm border mt-6"
+          style={{
+            background: "var(--bg-secondary)",
+            borderColor: "var(--border-primary)",
+          }}
+        >
+          <h2
+            className="text-lg font-semibold mb-4"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Thông báo
+          </h2>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {notificationEnabled ? (
+                <Bell className="w-5 h-5 text-green-600" />
+              ) : (
+                <BellOff className="w-5 h-5 text-gray-400" />
+              )}
+              <div>
+                <div
+                  className="font-medium"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Desktop Notifications
+                </div>
+                <div
+                  className="text-sm"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {notificationEnabled
+                    ? "Đã bật - Bạn sẽ nhận thông báo khi có tin nhắn mới"
+                    : "Đã tắt - Bật để nhận thông báo khi có tin nhắn mới"}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleNotificationToggle}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                notificationEnabled
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {notificationEnabled ? "Đã bật" : "Bật"}
+            </button>
           </div>
         </div>
       </div>

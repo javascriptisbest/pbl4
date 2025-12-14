@@ -17,6 +17,7 @@ import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import imageRoutes from "./routes/image.route.js";
 import groupRoutes from "./routes/group.route.js";
+import friendRoutes from "./routes/friend.route.js";
 import { app, server } from "./lib/websocketServer.js";
 
 dotenv.config();
@@ -292,6 +293,7 @@ if (
   app.use("/api/messages", messageRoutes); // No limiter
   app.use("/api/images", uploadLimiter, imageRoutes);
   app.use("/api/groups", groupRoutes);
+  app.use("/api/friends", friendRoutes);
 
   // ===== DEBUG MIDDLEWARE =====
   app.use((req, res, next) => {

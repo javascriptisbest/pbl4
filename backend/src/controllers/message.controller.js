@@ -5,6 +5,7 @@
 
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
+import Friend from "../models/friend.model.js";
 
 import cloudinary from "../lib/cloudinary.js";
 import {
@@ -14,26 +15,231 @@ import {
 
 /**
  * GET /api/messages/users
- * Lấy danh sách users để hiển thị trong sidebar
- * (Exclude user hiện tại, không lấy password)
+ * Lấy danh sách bạn bè để hiển thị trong sidebar
+ * Trả về: thông tin user, lastMessage, unreadCount
  *
  * Performance: .lean() + .select() + index on email
  */
 export const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
+    console.log("📋 getUsersForSidebar called for user:", loggedInUserId.toString());
 
-    // Tìm tất cả users trừ chính mình
-    const filteredUsers = await User.find({
-      _id: { $ne: loggedInUserId }, // $ne = not equal
+    // Lấy danh sách bạn bè (accepted friendships)
+    const friendships = await Friend.find({
+      $or: [{ requester: loggedInUserId }, { recipient: loggedInUserId }],
+      status: "accepted",
     })
-      .select("-password") // Không trả về password
-      .limit(100) // Limit 100 users (pagination nếu cần)
-      .lean(); // Plain objects cho performance
+      .populate("requester", "fullName profilePic email")
+      .populate("recipient", "fullName profilePic email")
+      .lean();
+    
+    console.log("👫 Found friendships:", friendships.length);
 
-    res.status(200).json(filteredUsers);
+    // Map để lấy thông tin bạn bè (không phải chính mình)
+    const friendIds = friendships.map((friendship) => {
+      return friendship.requester._id.toString() === loggedInUserId.toString()
+        ? friendship.recipient._id
+        : friendship.requester._id;
+    });
+
+    // Lấy lastMessage và unreadCount cho mỗi bạn bè
+    const friendsWithMessages = await Promise.all(
+      friendships.map(async (friendship) => {
+        const friend =
+          friendship.requester._id.toString() === loggedInUserId.toString()
+            ? friendship.recipient
+            : friendship.requester;
+
+        const friendId = friend._id;
+
+        // Lấy tin nhắn cuối cùng giữa 2 người
+        const lastMessage = await Message.findOne({
+          $or: [
+            { senderId: loggedInUserId, receiverId: friendId },
+            { senderId: friendId, receiverId: loggedInUserId },
+          ],
+          isDeleted: { $ne: true }, // Cho phép null/undefined hoặc false
+          messageType: "direct",
+        })
+          .sort({ createdAt: -1 })
+          .select("text image video audio file senderId createdAt isRead")
+          .lean();
+
+        // Đếm số tin nhắn chưa đọc (từ bạn gửi cho mình)
+        const unreadCount = await Message.countDocuments({
+          senderId: friendId,
+          receiverId: loggedInUserId,
+          isRead: { $ne: true }, // Cho phép null/undefined hoặc false
+          isDeleted: { $ne: true },
+          messageType: "direct",
+        });
+
+        return {
+          ...friend,
+          lastMessage: lastMessage || null,
+          unreadCount,
+        };
+      })
+    );
+
+    // Sắp xếp theo thời gian tin nhắn cuối (mới nhất lên đầu)
+    friendsWithMessages.sort((a, b) => {
+      const timeA = a.lastMessage?.createdAt
+        ? new Date(a.lastMessage.createdAt).getTime()
+        : 0;
+      const timeB = b.lastMessage?.createdAt
+        ? new Date(b.lastMessage.createdAt).getTime()
+        : 0;
+      return timeB - timeA;
+    });
+
+    console.log("✅ Returning", friendsWithMessages.length, "friends");
+    if (friendsWithMessages.length > 0) {
+      console.log("   Sample:", friendsWithMessages[0].fullName, 
+        "- lastMessage:", friendsWithMessages[0].lastMessage?.text?.substring(0, 30) || "null",
+        "- unread:", friendsWithMessages[0].unreadCount);
+    }
+    
+    res.status(200).json(friendsWithMessages);
   } catch (error) {
     console.error("Error in getUsersForSidebar: ", error.message);
+    console.error(error.stack);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * GET /api/messages/preload
+ * Preload messages cho sidebar (giống Facebook Messenger)
+ * - Top 5 users: Load đủ 50 tin nhắn mỗi người
+ * - Còn lại: Load 5 tin nhắn gần nhất
+ * 
+ * Response: { [userId]: { messages: [], hasMore: boolean } }
+ */
+export const preloadMessages = async (req, res) => {
+  try {
+    const myId = req.user._id;
+
+    // Lấy danh sách bạn bè với lastMessage
+    const friendships = await Friend.find({
+      $or: [{ requester: myId }, { recipient: myId }],
+      status: "accepted",
+    }).lean();
+
+    const friendIds = friendships.map((f) =>
+      f.requester.toString() === myId.toString() ? f.recipient : f.requester
+    );
+
+    // Lấy conversation stats để xác định top 5 active users
+    const conversationStats = await Promise.all(
+      friendIds.map(async (friendId) => {
+        const lastMsg = await Message.findOne({
+          $or: [
+            { senderId: myId, receiverId: friendId },
+            { senderId: friendId, receiverId: myId },
+          ],
+          isDeleted: { $ne: true },
+          messageType: "direct",
+        })
+          .sort({ createdAt: -1 })
+          .select("createdAt")
+          .lean();
+
+        return {
+          friendId: friendId.toString(),
+          lastMessageTime: lastMsg?.createdAt || new Date(0),
+        };
+      })
+    );
+
+    // Sort by last message time (most recent first)
+    conversationStats.sort(
+      (a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime)
+    );
+
+    const preloadedData = {};
+
+    // Preload messages
+    await Promise.all(
+      conversationStats.map(async (stat, index) => {
+        const friendId = stat.friendId;
+        // Top 5: load 50 messages, others: load 5 messages
+        const limit = index < 5 ? 50 : 5;
+
+        const messages = await Message.find({
+          $or: [
+            { senderId: myId, receiverId: friendId },
+            { senderId: friendId, receiverId: myId },
+          ],
+          isDeleted: { $ne: true },
+          messageType: "direct",
+        })
+          .populate("senderId", "fullName profilePic")
+          .sort({ createdAt: -1 })
+          .limit(limit + 1) // Load 1 extra to check hasMore
+          .lean();
+
+        const hasMore = messages.length > limit;
+        const finalMessages = hasMore ? messages.slice(0, limit) : messages;
+
+        preloadedData[friendId] = {
+          messages: finalMessages.reverse(), // Reverse to chronological order
+          hasMore,
+          preloadLevel: index < 5 ? "full" : "preview",
+        };
+      })
+    );
+
+    res.status(200).json(preloadedData);
+  } catch (error) {
+    console.error("Error in preloadMessages: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * POST /api/messages/read/:userId
+ * Đánh dấu tất cả tin nhắn từ userId là đã đọc
+ * Gọi khi user mở conversation
+ */
+export const markMessagesAsRead = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const myId = req.user._id;
+
+    // Cập nhật tất cả tin nhắn chưa đọc từ userId gửi cho mình
+    const result = await Message.updateMany(
+      {
+        senderId: userId,
+        receiverId: myId,
+        isRead: { $ne: true }, // Cho phép null/undefined hoặc false
+        isDeleted: { $ne: true },
+        messageType: "direct",
+      },
+      {
+        $set: {
+          isRead: true,
+          readAt: new Date(),
+        },
+      }
+    );
+
+    // Emit socket event để notify sender rằng tin đã được đọc
+    const senderSocketId = getReceiverSocketId(userId);
+    if (senderSocketId) {
+      emitToSocket(senderSocketId, "messagesRead", {
+        readerId: myId.toString(),
+        count: result.modifiedCount,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("Error in markMessagesAsRead: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -64,7 +270,7 @@ export const getMessages = async (req, res) => {
         { senderId: myId, receiverId: userToChatId }, // Tin mình gửi
         { senderId: userToChatId, receiverId: myId }, // Tin người kia gửi
       ],
-      isDeleted: false, // Không lấy messages đã xóa
+      isDeleted: { $ne: true }, // Không lấy messages đã xóa
     })
       .populate("senderId", "fullName profilePic") // Populate thông tin sender
       .sort({ createdAt: -1 }) // Sort mới nhất trước
@@ -242,6 +448,36 @@ export const sendMessage = async (req, res) => {
       mediaType,
     });
 
+    // Tự động tạo friend relationship nếu chưa có
+    // Kiểm tra xem đây có phải tin nhắn đầu tiên giữa 2 users không
+    const messageCount = await Message.countDocuments({
+      $or: [
+        { senderId, receiverId },
+        { senderId: receiverId, receiverId: senderId },
+      ],
+    });
+
+    // Nếu đây là tin nhắn đầu tiên, tự động tạo friend relationship
+    if (messageCount === 0) {
+      const existingFriendship = await Friend.findOne({
+        $or: [
+          { requester: senderId, recipient: receiverId },
+          { requester: receiverId, recipient: senderId },
+        ],
+      });
+
+      if (!existingFriendship) {
+        // Tạo friend relationship với status accepted
+        const friendship = new Friend({
+          requester: senderId,
+          recipient: receiverId,
+          status: "accepted",
+        });
+        await friendship.save();
+        console.log("✅ Auto-created friendship between", senderId, "and", receiverId);
+      }
+    }
+
     console.log("💾 Saving message to database...");
     await newMessage.save();
     console.log("✅ Message saved successfully:", newMessage._id);
@@ -356,6 +592,55 @@ export const addReaction = async (req, res) => {
     res.status(200).json(updatedMessage);
   } catch (error) {
     console.log("Error in addReaction controller: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const editMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { text } = req.body;
+    const userId = req.user._id;
+
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: "Text is required" });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+
+    // Only allow sender to edit their own message
+    if (message.senderId.toString() !== userId.toString()) {
+      return res.status(403).json({ error: "You can only edit your own messages" });
+    }
+
+    // Cannot edit deleted messages
+    if (message.isDeleted) {
+      return res.status(400).json({ error: "Cannot edit deleted message" });
+    }
+
+    // Update message
+    message.text = text.trim();
+    message.isEdited = true;
+    message.editedAt = new Date();
+    await message.save();
+
+    // Emit to both sender and receiver
+    const receiverSocketId = getReceiverSocketId(message.receiverId);
+    const senderSocketId = getReceiverSocketId(message.senderId);
+
+    if (receiverSocketId) {
+      emitToSocket(receiverSocketId, "messageEdited", message);
+    }
+    if (senderSocketId && senderSocketId !== receiverSocketId) {
+      emitToSocket(senderSocketId, "messageEdited", message);
+    }
+
+    res.status(200).json(message);
+  } catch (error) {
+    console.log("Error in editMessage controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

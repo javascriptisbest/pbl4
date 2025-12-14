@@ -10,6 +10,7 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios.js";
 import { useAuthStore } from "./useAuthStore";
+import { notificationManager } from "../lib/notifications.js";
 
 export const useChatStore = create((set, get) => ({
   // State
@@ -478,6 +479,27 @@ export const useChatStore = create((set, get) => ({
             : 0;
           return timeB - timeA;
         });
+        
+        // 🔔 Show notification
+        const sender = updatedUsers.find(u => u._id === sId);
+        const senderName = sender?.fullName || "Ai đó";
+        const messageText = newMessage.text 
+          ? (newMessage.text.length > 50 ? newMessage.text.substring(0, 50) + "..." : newMessage.text)
+          : newMessage.image ? "📷 Đã gửi ảnh"
+          : newMessage.video ? "🎥 Đã gửi video"
+          : newMessage.audio ? "🎵 Đã gửi audio"
+          : newMessage.file ? "📄 Đã gửi file"
+          : "Đã gửi tin nhắn";
+        
+        notificationManager.show(
+          senderName,
+          messageText,
+          sender?.profilePic || "/avatar.png",
+          () => {
+            const { setSelectedUser } = get();
+            setSelectedUser(sId);
+          }
+        );
         
         set({ users: updatedUsers });
         return;

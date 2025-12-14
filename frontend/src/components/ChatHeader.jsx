@@ -1,11 +1,35 @@
-import { X, Phone } from "lucide-react";
+import { X, Phone, Bell, BellOff } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
+import { notificationManager } from "../lib/notifications.js";
 import toast from "react-hot-toast";
+import { useState, useEffect } from "react";
 
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
+  const [notificationEnabled, setNotificationEnabled] = useState(
+    Notification.permission === "granted"
+  );
+
+  useEffect(() => {
+    setNotificationEnabled(Notification.permission === "granted");
+  }, []);
+
+  const handleNotificationToggle = async () => {
+    if (Notification.permission === "granted") {
+      // Đã bật, không thể tắt (browser không cho phép)
+      toast.info("Để tắt notification, vui lòng vào Settings của browser");
+    } else {
+      const granted = await notificationManager.requestPermission();
+      if (granted) {
+        setNotificationEnabled(true);
+        toast.success("Đã bật thông báo");
+      } else {
+        toast.error("Cần cho phép thông báo để nhận tin nhắn");
+      }
+    }
+  };
 
   // Simple voice call function
   const handleVoiceCall = () => {
@@ -57,6 +81,23 @@ const ChatHeader = () => {
 
         {/* Call and close buttons */}
         <div className="flex items-center gap-2">
+          {/* Notification Button */}
+          <button
+            onClick={handleNotificationToggle}
+            className={`btn btn-sm btn-circle btn-ghost ${
+              notificationEnabled
+                ? "hover:bg-green-100 text-green-600"
+                : "hover:bg-gray-100 text-gray-400"
+            }`}
+            title={
+              notificationEnabled
+                ? "Thông báo đã bật"
+                : "Bật thông báo"
+            }
+          >
+            {notificationEnabled ? <Bell size={18} /> : <BellOff size={18} />}
+          </button>
+
           {/* Voice Call Button */}
           <button
             onClick={handleVoiceCall}

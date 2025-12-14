@@ -112,6 +112,24 @@ const messageSchema = new mongoose.Schema(
     deletedAt: {
       type: Date,
     },
+    
+    // Đã đọc - cho tính năng unread messages
+    isRead: {
+      type: Boolean,
+      default: false,
+    },
+    readAt: {
+      type: Date,
+    },
+    
+    // Đã sửa - cho tính năng edit message
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
+    editedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true, // Tự động thêm createdAt và updatedAt
@@ -139,6 +157,9 @@ messageSchema.index({ senderId: 1, receiverId: 1, createdAt: -1 });
 
 // 5. Index cho messageType (nếu cần filter by type)
 messageSchema.index({ messageType: 1 });
+
+// 6. Index cho unread messages queries
+messageSchema.index({ receiverId: 1, isRead: 1 });
 
 const Message = mongoose.model("Message", messageSchema);
 

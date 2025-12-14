@@ -289,4 +289,29 @@ io.on("connection", (socket) => {
   });
 });
 
+/**
+ * Emit friend request accepted event to both users
+ */
+export function emitFriendAccepted(requesterId, recipientId, friendship) {
+  // Notify requester (người gửi lời mời)
+  const requesterSockets = getAllUserSockets(requesterId);
+  requesterSockets.forEach((socketId) => {
+    io.to(socketId).emit("friendAccepted", {
+      friendship,
+      message: "Your friend request was accepted",
+    });
+  });
+
+  // Notify recipient (người chấp nhận)
+  const recipientSockets = getAllUserSockets(recipientId);
+  recipientSockets.forEach((socketId) => {
+    io.to(socketId).emit("friendAccepted", {
+      friendship,
+      message: "Friend request accepted",
+    });
+  });
+
+  console.log(`✅ Friend accepted event emitted: ${requesterId} <-> ${recipientId}`);
+}
+
 export { io, app, server };
