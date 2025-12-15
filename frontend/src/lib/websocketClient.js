@@ -1,9 +1,3 @@
-/**
- * WebSocket Client Wrapper
- * Thay thế Socket.IO với WebSocket thuần (TCP-based)
- * Giữ API tương tự Socket.IO để dễ migrate
- */
-
 export class WebSocketClient {
   constructor(url, options = {}) {
     this.url = url;
@@ -28,14 +22,8 @@ export class WebSocketClient {
     }
   }
 
-  /**
-   * Kết nối WebSocket
-   */
   connect() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      console.log("WebSocket already connected");
-      return;
-    }
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
 
     // Convert HTTP URL to WebSocket URL
     let wsUrl = this.url;
@@ -48,11 +36,8 @@ export class WebSocketClient {
       wsUrl = `ws://${wsUrl}`;
     }
 
-    // Build WebSocket URL với query params
     const queryString = new URLSearchParams(this.query).toString();
     wsUrl = `${wsUrl}${queryString ? `?${queryString}` : ""}`;
-
-    console.log("🔌 Connecting to WebSocket:", wsUrl);
 
     try {
       this.ws = new WebSocket(wsUrl);
@@ -69,10 +54,7 @@ export class WebSocketClient {
         clearTimeout(timeoutId);
         this.connected = true;
         this.reconnectAttempts = 0;
-        console.log("✅ WebSocket connected, ID:", this.id);
         this.trigger("connect");
-        
-        // Start ping interval
         this.startPing();
       };
 
@@ -87,7 +69,10 @@ export class WebSocketClient {
 
       this.ws.onerror = (error) => {
         clearTimeout(timeoutId);
-        console.error("❌ WebSocket error:", error);
+        // Chỉ log error thực sự, không log connection errors thông thường
+        if (error.type !== "error" || this.ws.readyState !== WebSocket.CONNECTING) {
+          console.error("WebSocket error:", error);
+        }
         this.trigger("connect_error", error);
       };
 
@@ -95,17 +80,14 @@ export class WebSocketClient {
         clearTimeout(timeoutId);
         this.connected = false;
         this.stopPing();
-        console.log("📴 WebSocket disconnected:", event.code, event.reason);
         this.trigger("disconnect", event.reason || "Connection closed");
 
-        // Auto-reconnect nếu không phải manual close
         if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.reconnectAttempts++;
           const delay = Math.min(
             this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
             this.reconnectDelayMax
           );
-          console.log(`🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
           this.trigger("reconnect_attempt", this.reconnectAttempts);
           setTimeout(() => this.connect(), delay);
         } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
@@ -118,9 +100,6 @@ export class WebSocketClient {
     }
   }
 
-  /**
-   * Xử lý message từ server
-   */
   handleMessage(data) {
     const { type, event, payload } = data;
 
@@ -136,28 +115,17 @@ export class WebSocketClient {
     }
   }
 
-  /**
-   * Gửi message lên server
-   */
   send(type, event, payload) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       const message = JSON.stringify({ type, event, payload });
       this.ws.send(message);
-    } else {
-      console.warn("WebSocket not connected, cannot send:", event);
     }
   }
 
-  /**
-   * Emit event (gửi lên server)
-   */
   emit(event, payload) {
     this.send("event", event, payload);
   }
 
-  /**
-   * Lắng nghe event từ server
-   */
   on(event, callback) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
@@ -165,9 +133,6 @@ export class WebSocketClient {
     this.listeners.get(event).push(callback);
   }
 
-  /**
-   * Bỏ lắng nghe event
-   */
   off(event, callback) {
     if (this.listeners.has(event)) {
       const callbacks = this.listeners.get(event);
@@ -178,9 +143,6 @@ export class WebSocketClient {
     }
   }
 
-  /**
-   * Xóa tất cả listeners
-   */
   removeAllListeners(event) {
     if (event) {
       this.listeners.delete(event);
@@ -189,9 +151,6 @@ export class WebSocketClient {
     }
   }
 
-  /**
-   * Trigger event internally (gọi callbacks) - dùng cho events từ server
-   */
   trigger(event, ...args) {
     if (this.listeners.has(event)) {
       this.listeners.get(event).forEach((callback) => {
@@ -204,9 +163,6 @@ export class WebSocketClient {
     }
   }
 
-  /**
-   * Ngắt kết nối
-   */
   disconnect() {
     this.reconnectAttempts = this.maxReconnectAttempts; // Disable auto-reconnect
     this.stopPing();
@@ -216,9 +172,6 @@ export class WebSocketClient {
     }
   }
 
-  /**
-   * Ping để keep connection alive
-   */
   startPing() {
     this.pingInterval = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -234,17 +187,11 @@ export class WebSocketClient {
     }
   }
 
-  /**
-   * Get connection state
-   */
   get readyState() {
     return this.ws ? this.ws.readyState : WebSocket.CLOSED;
   }
 }
 
-/**
- * Factory function để tạo WebSocket client (tương tự io())
- */
 export function createWebSocket(url, options = {}) {
   return new WebSocketClient(url, options);
 }

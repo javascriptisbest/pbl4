@@ -16,7 +16,6 @@ router.post("/upload", protectRoute, async (req, res) => {
     let uploadResponse;
 
     if (image) {
-      console.log("Uploading image to Cloudinary...");
       uploadResponse = await cloudinary.uploader.upload(image, {
         folder: "chat_app_images",
         resource_type: "image",
@@ -25,7 +24,6 @@ router.post("/upload", protectRoute, async (req, res) => {
     }
 
     if (video) {
-      console.log("Uploading video to Cloudinary...");
       uploadResponse = await cloudinary.uploader.upload(video, {
         folder: "chat_app_videos",
         resource_type: "video",
@@ -35,16 +33,12 @@ router.post("/upload", protectRoute, async (req, res) => {
       });
     }
 
-    console.log("Upload successful:", uploadResponse.secure_url);
-
     res.status(200).json({
       fileUrl: uploadResponse.secure_url,
       resourceType: uploadResponse.resource_type,
       success: true,
     });
   } catch (error) {
-    console.log("Error in media upload:", error.message);
-    console.log("Full error:", error);
 
     // Return more specific error messages
     if (error.message?.includes("Invalid image file")) {

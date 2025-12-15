@@ -23,7 +23,6 @@ const VoiceCallModal = ({
 
     // Setup event handlers
     voiceCallManager.onCallConnected = () => {
-      console.log("Call connected!");
       setIsConnected(true);
       setConnectionStatus("connected");
       toast.success("Voice call connected");
@@ -35,7 +34,6 @@ const VoiceCallModal = ({
     };
 
     voiceCallManager.onCallDisconnected = () => {
-      console.log("Call disconnected");
       setIsConnected(false);
       setConnectionStatus("disconnected");
 
@@ -56,23 +54,12 @@ const VoiceCallModal = ({
     };
 
     voiceCallManager.onRemoteStream = (stream) => {
-      console.log("Remote stream received", stream);
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = stream;
-
-        // Try to play audio, handle autoplay policy
-        remoteAudioRef.current
-          .play()
-          .then(() => {
-            console.log("Remote audio playing successfully");
-          })
-          .catch((error) => {
-            console.error("Error playing remote audio:", error);
-            // Retry with user interaction
-            toast.error("Click anywhere to enable audio");
-          });
-      } else {
-        console.error("Remote audio ref not available");
+        remoteAudioRef.current.play().catch((error) => {
+          console.error("Error playing remote audio:", error);
+          toast.error("Click anywhere to enable audio");
+        });
       }
     };
 

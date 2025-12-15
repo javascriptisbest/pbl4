@@ -2,14 +2,11 @@ import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import imageCompression from "browser-image-compression";
-import cloudinary from "../src/lib/cloudinary.js";
 import path from "path";
 import rateLimit from "express-rate-limit";
 import compression from "compression";
 import cluster from "cluster";
 import os from "os";
-import { Worker, isMainThread, parentPort, workerData } from "worker_threads";
 
 import { connectDB } from "./lib/db.js";
 
@@ -26,103 +23,19 @@ const PORT = process.env.PORT;
 const __dirname = path.resolve();
 const numCPUs = os.cpus().length;
 
-// ===== WORKER THREAD POOL FOR CPU-INTENSIVE TASKS =====
-class WorkerPool {
-  constructor(poolSize = Math.min(4, numCPUs)) {
-    this.workers = [];
-    this.queue = [];
-    this.poolSize = poolSize;
-    this.initWorkers();
-  }
-
-  initWorkers() {
-    for (let i = 0; i < this.poolSize; i++) {
-      this.createWorker();
-    }
-  }
-
-  createWorker() {
-    const worker = {
-      worker: null,
-      busy: false,
-      id: this.workers.length,
-    };
-    this.workers.push(worker);
-  }
-
-  async executeTask(taskData) {
-    return new Promise((resolve, reject) => {
-      this.queue.push({ taskData, resolve, reject });
-      this.processQueue();
-    });
-  }
-
-  processQueue() {
-    if (this.queue.length === 0) return;
-
-    const availableWorker = this.workers.find((w) => !w.busy);
-    if (!availableWorker) return;
-
-    const task = this.queue.shift();
-    this.runTask(availableWorker, task);
-  }
-
-  runTask(workerObj, { taskData, resolve, reject }) {
-    workerObj.busy = true;
-
-    // Simulate CPU-intensive work with setTimeout for async processing
-    setTimeout(() => {
-      try {
-        // Process task (image compression, data processing, etc.)
-        const result = this.processCPUTask(taskData);
-        resolve(result);
-      } catch (error) {
-        reject(error);
-      } finally {
-        workerObj.busy = false;
-        this.processQueue(); // Process next task in queue
-      }
-    }, 0);
-  }
-
-  processCPUTask(data) {
-    // Placeholder for CPU-intensive operations
-    // In real app: image processing, data transformation, etc.
-    return { processed: true, data };
-  }
-
-  shutdown() {
-    this.workers.forEach((w) => {
-      if (w.worker) {
-        w.worker.terminate();
-      }
-    });
-  }
-}
-
-// Global worker pool instance
-const workerPool = new WorkerPool();
-
 // ===== CLUSTERING FOR PRODUCTION =====
 if (
   process.env.NODE_ENV === "production" &&
   cluster.isPrimary &&
   process.env.ENABLE_CLUSTERING !== "false"
 ) {
-  const workers = Math.min(4, numCPUs); // Max 4 workers
-  console.log(`🚀 Master process ${process.pid} starting ${workers} workers`);
-
+  const workers = Math.min(4, numCPUs);
   for (let i = 0; i < workers; i++) {
     cluster.fork();
   }
 
   cluster.on("exit", (worker, code, signal) => {
-    console.log(`Worker ${worker.process.pid} died. Restarting...`);
     cluster.fork();
-  });
-
-  cluster.on("online", (worker) => {
-    console.log(`Worker ${worker.process.pid} is online`);
   });
 } else {
   // ===== ASYNC MIDDLEWARE =====
@@ -295,17 +208,7 @@ if (
   app.use("/api/groups", groupRoutes);
   app.use("/api/friends", friendRoutes);
 
-  // ===== DEBUG MIDDLEWARE =====
-  app.use((req, res, next) => {
-    console.log(
-      `🔍 ${req.method} ${req.originalUrl} - ${new Date().toISOString()}`
-    );
-    next();
-  });
-
-  // ===== 404 HANDLER =====
   app.use("/api/*", (req, res) => {
-    console.log(`❌ 404 API Route not found: ${req.method} ${req.originalUrl}`);
     res.status(404).json({
       error: "API route not found",
       method: req.method,

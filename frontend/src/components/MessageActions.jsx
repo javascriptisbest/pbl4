@@ -7,7 +7,6 @@ const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
 const MessageActions = ({ message, isMyMessage, onEdit }) => {
   const [showMenu, setShowMenu] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef(null);
   
   const { addReaction, deleteMessage } = useChatStore();
@@ -33,20 +32,11 @@ const MessageActions = ({ message, isMyMessage, onEdit }) => {
   };
 
   const handleDelete = async () => {
-    if (isDeleting) return;
-    
-    const confirmed = window.confirm("Bạn có chắc muốn xóa tin nhắn này?");
-    if (!confirmed) return;
-    
-    setIsDeleting(true);
     try {
       await deleteMessage(message._id);
-      toast.success("Đã xóa tin nhắn");
       setShowMenu(false);
     } catch (error) {
-      toast.error("Không thể xóa tin nhắn");
-    } finally {
-      setIsDeleting(false);
+      // Error đã được xử lý trong store
     }
   };
 
@@ -108,11 +98,10 @@ const MessageActions = ({ message, isMyMessage, onEdit }) => {
           {isMyMessage && (
             <button
               onClick={handleDelete}
-              disabled={isDeleting}
               className="w-full flex items-center gap-3 px-4 py-2 hover:bg-red-50 text-sm text-red-600"
             >
               <Trash2 className="w-4 h-4" />
-              <span>{isDeleting ? "Đang xóa..." : "Xóa"}</span>
+              <span>Xóa</span>
             </button>
           )}
         </div>

@@ -161,15 +161,7 @@ wss.on("connection", (ws, req) => {
   const userId = query.userId;
   const sessionId = query.sessionId;
 
-  // Generate socket ID
   const socketId = generateSocketId();
-
-  console.log("🔗 WebSocket connection:", {
-    socketId,
-    userId,
-    sessionId,
-    query,
-  });
 
   // Store socket info
   const socketInfo = {
@@ -208,18 +200,7 @@ wss.on("connection", (ws, req) => {
       connectedAt: new Date(),
     });
 
-    // Update primary socket to latest connection
     userSocketMap[userId].socketId = socketId;
-
-    console.log(
-      "✅ User mapped:",
-      userId,
-      "->",
-      socketId,
-      `(${userSocketMap[userId].sessions.length} sessions)`
-    );
-  } else {
-    console.log("⚠️ No userId in query params");
   }
 
   // Broadcast danh sách users online đến tất cả clients
@@ -248,28 +229,17 @@ wss.on("connection", (ws, req) => {
     }
   });
 
-  // Handle disconnect
   ws.on("close", () => {
-    console.log("📴 WebSocket disconnected:", socketId);
-
     const userId = socketUserMap[socketId];
     if (userId && userSocketMap[userId]) {
-      // Remove specific session
       userSocketMap[userId].sessions = userSocketMap[userId].sessions.filter(
         (session) => session.socketId !== socketId
       );
 
-      // If no sessions left, remove user completely
       if (userSocketMap[userId].sessions.length === 0) {
         delete userSocketMap[userId];
-        console.log(`🚪 User ${userId} fully disconnected`);
       } else {
-        // Update primary socket to remaining session
-        userSocketMap[userId].socketId =
-          userSocketMap[userId].sessions[0].socketId;
-        console.log(
-          `📱 User ${userId} has ${userSocketMap[userId].sessions.length} remaining sessions`
-        );
+        userSocketMap[userId].socketId = userSocketMap[userId].sessions[0].socketId;
       }
     }
 

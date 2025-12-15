@@ -12,7 +12,6 @@
 
 export class VoiceCallManager {
   constructor(socket, userId) {
-    console.log("Initializing VoiceCallManager for user:", userId);
     this.socket = socket; // WebSocket connection (dùng làm signaling server)
     this.userId = userId; // ID của user hiện tại
     this.peerConnection = null; // RTCPeerConnection object
@@ -50,7 +49,6 @@ export class VoiceCallManager {
      * Payload: { callerId, offer }
      */
     this.socket.on("voice-call-incoming", async ({ callerId, offer }) => {
-      console.log("Incoming voice call from:", callerId);
       this.callerId = callerId;
       this.isIncoming = true;
 
@@ -65,7 +63,6 @@ export class VoiceCallManager {
      * Peer đã chấp nhận cuộc gọi và gửi answer (SDP) lại
      */
     this.socket.on("voice-call-answered", async ({ answer, answererId }) => {
-      console.log("Call answered by:", answererId);
       if (this.peerConnection) {
         // Set remote description = SDP answer từ peer
         await this.peerConnection.setRemoteDescription(
@@ -82,7 +79,6 @@ export class VoiceCallManager {
     this.socket.on(
       "voice-call-ice-candidate",
       async ({ candidate, senderId }) => {
-        console.log("Received ICE candidate from:", senderId);
         if (this.peerConnection && candidate) {
           try {
             await this.peerConnection.addIceCandidate(
@@ -95,9 +91,7 @@ export class VoiceCallManager {
       }
     );
 
-    // Call rejected
     this.socket.on("voice-call-rejected", ({ rejecterId }) => {
-      console.log("Call rejected by:", rejecterId);
       this.endCall();
 
       if (this.onCallRejected) {
@@ -105,9 +99,7 @@ export class VoiceCallManager {
       }
     });
 
-    // Call ended
     this.socket.on("voice-call-ended", ({ enderId }) => {
-      console.log("Call ended by:", enderId);
       this.endCall();
 
       if (this.onCallEnded) {
@@ -115,9 +107,7 @@ export class VoiceCallManager {
       }
     });
 
-    // Call failed (target not available)
     this.socket.on("voice-call-failed", ({ error }) => {
-      console.log("Call failed:", error);
       this.endCall();
 
       if (this.onCallFailed) {
@@ -132,7 +122,6 @@ export class VoiceCallManager {
    */
   async initiateCall(targetUserId) {
     try {
-      console.log("Initiating call to:", targetUserId);
       this.calleeId = targetUserId;
       this.isIncoming = false;
 
@@ -159,8 +148,6 @@ export class VoiceCallManager {
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
 
-      // Send offer via WebSocket
-      console.log("Sending voice-call-initiate event to:", targetUserId);
       this.socket.emit("voice-call-initiate", {
         targetUserId: targetUserId,
         offer: offer,
@@ -195,9 +182,6 @@ export class VoiceCallManager {
    */
   async answerCall(offer) {
     try {
-      console.log("Answering call from:", this.callerId);
-
-      // Get user media
       this.localStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -249,8 +233,6 @@ export class VoiceCallManager {
    * Reject an incoming call
    */
   rejectCall() {
-    console.log("Rejecting call from:", this.callerId);
-
     this.socket.emit("voice-call-reject", {
       callerId: this.callerId,
     });
@@ -262,8 +244,6 @@ export class VoiceCallManager {
    * End the current call
    */
   endCall() {
-    console.log("Ending call");
-
     if (this.isCallActive && (this.callerId || this.calleeId)) {
       const targetUserId = this.isIncoming ? this.callerId : this.calleeId;
 
@@ -311,11 +291,7 @@ export class VoiceCallManager {
       }
     };
 
-    // Remote stream
     this.peerConnection.ontrack = (event) => {
-      console.log("Received remote stream", event);
-      console.log("Stream tracks:", event.streams[0]?.getTracks());
-
       this.remoteStream = event.streams[0];
 
       if (this.onRemoteStream) {
@@ -327,7 +303,6 @@ export class VoiceCallManager {
 
     // Connection state
     this.peerConnection.onconnectionstatechange = () => {
-      console.log("Connection state:", this.peerConnection.connectionState);
 
       if (this.peerConnection.connectionState === "connected") {
         if (this.onCallConnected) {
@@ -341,13 +316,7 @@ export class VoiceCallManager {
       }
     };
 
-    // ICE connection state
-    this.peerConnection.oniceconnectionstatechange = () => {
-      console.log(
-        "ICE connection state:",
-        this.peerConnection.iceConnectionState
-      );
-    };
+    this.peerConnection.oniceconnectionstatechange = () => {};
   }
 
   /**

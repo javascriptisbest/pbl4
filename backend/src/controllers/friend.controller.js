@@ -388,19 +388,10 @@ export const searchUsersToAdd = async (req, res) => {
       .sort((a, b) => (a.fullName || "").localeCompare(b.fullName || ""))
       .slice(0, 20);
 
-    console.log(`🔍 Search query: "${query}"`);
-    console.log(`📋 Excluding ${friendIds.length} friends/pending`);
-    console.log(`🔎 Normalized query: "${normalizedQuery}"`);
 
     // Debug: Kiểm tra tổng số users trong database
     const totalUsers = await User.countDocuments({ _id: { $ne: userId } });
-    console.log(`📊 Total users in DB (excluding self): ${totalUsers}`);
-    console.log(`📊 Candidates before filter: ${allCandidates.length}`);
 
-    console.log(`✅ Found ${users.length} users matching "${query}"`);
-    if (users.length > 0) {
-      console.log(`   Sample: ${users[0].fullName} (${users[0].email})`);
-    }
 
     res.status(200).json(users);
   } catch (error) {

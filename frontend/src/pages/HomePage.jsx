@@ -10,7 +10,6 @@ import ChatContainer from "../components/ChatContainer";
 import GroupChatContainer from "../components/GroupChatContainer";
 import VoiceCallModal from "../components/VoiceCallModal";
 import { VoiceCallManager } from "../lib/voiceCallUtils";
-import { measureAsync } from "../lib/performanceMonitor";
 import { createWebSocket } from "../lib/websocketClient.js";
 import toast from "react-hot-toast";
 
@@ -31,55 +30,33 @@ const HomePage = () => {
   useEffect(() => {
     if (!authUser) return;
 
-    // Preload users and groups for instant sidebar switching
-    const preloadData = measureAsync("preloadChatData", async () => {
-      console.log("🚀 HomePage: Preloading chat data...");
-
-      // Load users if not already loaded
-      if (!users.length) {
-        console.log("👥 Loading users...");
-        await getUsers();
+    // Preload data không blocking - chạy background
+    const preloadData = async () => {
+      try {
+        if (!users.length) await getUsers();
+        if (!groups.length) await getGroups();
+      } catch (error) {
+        // Silent fail
       }
+    };
 
-      // Load groups if not already loaded
-      if (!groups.length) {
-        console.log("👥 Loading groups...");
-        await getGroups();
-      }
-    });
-
-    // Measure voice call setup performance
-    const setupVoiceCall = measureAsync("voiceCallSetup", async () => {
-      console.log("🔧 Initializing voice call system...");
-
-      // Simple socket connection với URL detection
+    const setupVoiceCall = async () => {
       const socketURL = getSocketURL();
-      console.log("🌐 Voice call socket URL:", socketURL, {
-        location: window?.location?.href,
-        timestamp: Date.now(),
-        version: "voice-v2.1",
-      });
 
       const socket = createWebSocket(socketURL, {
         query: { userId: authUser._id },
         forceNew: true, // Force new connection
       });
 
-      socket.on("connect", () => {
-        console.log("✅ Voice call socket connected");
-      });
-
       socket.on("connect_error", (error) => {
-        console.error("❌ Voice call socket connection error:", error.message);
+        console.error("Voice call socket error:", error.message);
       });
 
       // Initialize voice call manager
       const voiceCallManager = new VoiceCallManager(socket, authUser._id);
       window.voiceCallManager = voiceCallManager;
 
-      // Simple event handlers
       voiceCallManager.onIncomingCall = (callerId, offer) => {
-        console.log("📞 Incoming call from:", callerId);
         setVoiceCallModal({
           isOpen: true,
           isIncoming: true,
@@ -91,7 +68,6 @@ const HomePage = () => {
       };
 
       voiceCallManager.onCallInitiated = () => {
-        console.log("📞 Call initiated");
         setVoiceCallModal({
           isOpen: true,
           isIncoming: false,
@@ -103,7 +79,6 @@ const HomePage = () => {
       };
 
       voiceCallManager.onCallDisconnected = () => {
-        console.log("📞 Call disconnected");
         setVoiceCallModal({
           isOpen: false,
           isIncoming: false,
@@ -114,7 +89,6 @@ const HomePage = () => {
       };
 
       voiceCallManager.onCallRejected = () => {
-        console.log("📞 Call rejected");
         setVoiceCallModal({
           isOpen: false,
           isIncoming: false,
@@ -125,12 +99,10 @@ const HomePage = () => {
       };
 
       voiceCallManager.onCallConnected = () => {
-        console.log("📞 Call connected!");
         toast.success("Call connected");
       };
 
       voiceCallManager.onCallFailed = (error) => {
-        console.log("📞 Call failed:", error);
         setVoiceCallModal({
           isOpen: false,
           isIncoming: false,
@@ -142,26 +114,21 @@ const HomePage = () => {
       };
 
       return socket;
-    });
+    };
 
-    setupVoiceCall().then((socket) => {
-      // Cleanup function setup
-      return () => {
-        console.log("🧹 Cleaning up voice call system");
-        if (window.voiceCallManager) {
-          window.voiceCallManager.destroy();
-          window.voiceCallManager = null;
-        }
-        socket.disconnect();
-      };
-    });
+    setupVoiceCall();
 
-    // Run preload in parallel
+    // Cleanup function
+    return () => {
+      if (window.voiceCallManager) {
+        window.voiceCallManager.destroy();
+        window.voiceCallManager = null;
+      }
+    };
+
     preloadData();
 
-    // Cleanup
     return () => {
-      console.log("🧹 Cleaning up voice call system");
       if (window.voiceCallManager) {
         window.voiceCallManager.destroy();
         window.voiceCallManager = null;
@@ -177,7 +144,6 @@ const HomePage = () => {
   ]);
 
   const handleCloseCallModal = () => {
-    console.log("❌ Closing call modal");
     setVoiceCallModal({
       isOpen: false,
       isIncoming: false,

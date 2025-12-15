@@ -12,11 +12,6 @@ class PerformanceMonitor {
     this.supportsWorkers = typeof Worker !== "undefined";
     this.supportsSharedArrayBuffer = typeof SharedArrayBuffer !== "undefined";
     this.supportsConcurrency = navigator.hardwareConcurrency || 2;
-
-    console.log("🔧 Performance Features:");
-    console.log("  Web Workers:", this.supportsWorkers);
-    console.log("  SharedArrayBuffer:", this.supportsSharedArrayBuffer);
-    console.log("  CPU Cores:", this.supportsConcurrency);
   }
 
   // Measure function execution time
@@ -31,11 +26,7 @@ class PerformanceMonitor {
       const duration = end - start;
       this.recordMetric(name, duration);
 
-      if (duration > 100) {
-        console.warn(
-          `⚠️ Slow operation: ${name} took ${duration.toFixed(2)}ms`
-        );
-      }
+      // Tắt warnings để không làm chậm app
 
       return result;
     };
@@ -91,9 +82,7 @@ class PerformanceMonitor {
         const fps = Math.round((frames * 1000) / (currentTime - lastTime));
         this.recordMetric("fps", fps);
 
-        if (fps < 30) {
-          console.warn(`⚠️ Low FPS: ${fps}`);
-        }
+        // Tắt FPS warnings
 
         frames = 0;
         lastTime = currentTime;
@@ -120,11 +109,7 @@ class PerformanceMonitor {
       this.recordMetric("networkRequest", duration);
       this.recordMetric(`network_${new URL(url).pathname}`, duration);
 
-      if (duration > 2000) {
-        console.warn(
-          `⚠️ Slow network request: ${url} took ${duration.toFixed(2)}ms`
-        );
-      }
+      // Tắt network warnings
 
       return response;
     });
@@ -135,27 +120,9 @@ class PerformanceMonitor {
     const metrics = this.getMetrics();
     const memory = this.getMemoryUsage();
 
-    console.group("📊 Performance Report");
-
     if (memory) {
-      console.log(
-        `💾 Memory: ${memory.used}MB / ${memory.total}MB (${Math.round(
-          (memory.used / memory.total) * 100
-        )}%)`
-      );
+      // Memory usage available but not logged
     }
-
-    Object.entries(metrics).forEach(([name, metric]) => {
-      console.log(
-        `⏱️ ${name}: avg ${metric.avg.toFixed(2)}ms (${
-          metric.count
-        } calls, min: ${metric.min.toFixed(2)}ms, max: ${metric.max.toFixed(
-          2
-        )}ms)`
-      );
-    });
-
-    console.groupEnd();
   }
 
   // Auto-report every 30 seconds in development

@@ -7,7 +7,7 @@ import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import Friend from "../models/friend.model.js";
 
-import cloudinary from "../lib/cloudinary.js";
+import { uploadMedia } from "../lib/uploadMedia.js";
 import {
   getReceiverSocketId,
   emitToSocket,
@@ -23,9 +23,7 @@ import {
 export const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
-    console.log("📋 getUsersForSidebar called for user:", loggedInUserId.toString());
 
-    // Lấy danh sách bạn bè (accepted friendships)
     const friendships = await Friend.find({
       $or: [{ requester: loggedInUserId }, { recipient: loggedInUserId }],
       status: "accepted",
@@ -33,8 +31,6 @@ export const getUsersForSidebar = async (req, res) => {
       .populate("requester", "fullName profilePic email")
       .populate("recipient", "fullName profilePic email")
       .lean();
-    
-    console.log("👫 Found friendships:", friendships.length);
 
     // Map để lấy thông tin bạn bè (không phải chính mình)
     const friendIds = friendships.map((friendship) => {
@@ -94,13 +90,6 @@ export const getUsersForSidebar = async (req, res) => {
       return timeB - timeA;
     });
 
-    console.log("✅ Returning", friendsWithMessages.length, "friends");
-    if (friendsWithMessages.length > 0) {
-      console.log("   Sample:", friendsWithMessages[0].fullName, 
-        "- lastMessage:", friendsWithMessages[0].lastMessage?.text?.substring(0, 30) || "null",
-        "- unread:", friendsWithMessages[0].unreadCount);
-    }
-    
     res.status(200).json(friendsWithMessages);
   } catch (error) {
     console.error("Error in getUsersForSidebar: ", error.message);
@@ -121,51 +110,73 @@ export const preloadMessages = async (req, res) => {
   try {
     const myId = req.user._id;
 
-    // Lấy danh sách bạn bè với lastMessage
+    // Lấy danh sách bạn bè
     const friendships = await Friend.find({
       $or: [{ requester: myId }, { recipient: myId }],
       status: "accepted",
-    }).lean();
+    })
+      .limit(20) // Giới hạn 20 bạn bè để tối ưu
+      .lean();
+
+    if (friendships.length === 0) {
+      return res.status(200).json({});
+    }
 
     const friendIds = friendships.map((f) =>
       f.requester.toString() === myId.toString() ? f.recipient : f.requester
     );
 
-    // Lấy conversation stats để xác định top 5 active users
-    const conversationStats = await Promise.all(
-      friendIds.map(async (friendId) => {
-        const lastMsg = await Message.findOne({
+    // Tối ưu: Dùng aggregation để lấy lastMessage cho tất cả cùng lúc
+    const lastMessages = await Message.aggregate([
+      {
+        $match: {
           $or: [
-            { senderId: myId, receiverId: friendId },
-            { senderId: friendId, receiverId: myId },
+            { senderId: myId, receiverId: { $in: friendIds } },
+            { senderId: { $in: friendIds }, receiverId: myId },
           ],
           isDeleted: { $ne: true },
           messageType: "direct",
-        })
-          .sort({ createdAt: -1 })
-          .select("createdAt")
-          .lean();
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ["$senderId", myId] },
+              "$receiverId",
+              "$senderId",
+            ],
+          },
+          lastMessageTime: { $first: "$createdAt" },
+        },
+      },
+    ]);
 
-        return {
-          friendId: friendId.toString(),
-          lastMessageTime: lastMsg?.createdAt || new Date(0),
-        };
-      })
-    );
+    // Map lastMessageTime cho từng friend
+    const lastMessageMap = {};
+    lastMessages.forEach((msg) => {
+      lastMessageMap[msg._id.toString()] = msg.lastMessageTime;
+    });
 
-    // Sort by last message time (most recent first)
-    conversationStats.sort(
-      (a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime)
-    );
+    // Sort friends by lastMessageTime
+    const sortedFriends = friendIds
+      .map((id) => ({
+        friendId: id.toString(),
+        lastMessageTime: lastMessageMap[id.toString()] || new Date(0),
+      }))
+      .sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime))
+      .slice(0, 10); // Chỉ preload top 10
 
     const preloadedData = {};
 
-    // Preload messages
+    // Preload messages - batch queries
     await Promise.all(
-      conversationStats.map(async (stat, index) => {
+      sortedFriends.map(async (stat, index) => {
         const friendId = stat.friendId;
-        // Top 5: load 50 messages, others: load 5 messages
-        const limit = index < 5 ? 50 : 5;
+        const limit = index < 5 ? 50 : 5; // Top 5: 50, còn lại: 5
 
         const messages = await Message.find({
           $or: [
@@ -177,14 +188,14 @@ export const preloadMessages = async (req, res) => {
         })
           .populate("senderId", "fullName profilePic")
           .sort({ createdAt: -1 })
-          .limit(limit + 1) // Load 1 extra to check hasMore
+          .limit(limit + 1)
           .lean();
 
         const hasMore = messages.length > limit;
         const finalMessages = hasMore ? messages.slice(0, limit) : messages;
 
         preloadedData[friendId] = {
-          messages: finalMessages.reverse(), // Reverse to chronological order
+          messages: finalMessages.reverse(),
           hasMore,
           preloadLevel: index < 5 ? "full" : "preview",
         };
@@ -280,7 +291,6 @@ export const getMessages = async (req, res) => {
 
     res.status(200).json(messages.reverse()); // Reverse để cũ nhất ở đầu
   } catch (error) {
-    console.log("Error in getMessages controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -306,20 +316,6 @@ export const sendMessage = async (req, res) => {
     const { id: receiverId } = req.params;
     const senderId = req.user?._id;
 
-    console.log("📨 Send message request:", {
-      senderId,
-      receiverId,
-      hasUser: !!req.user,
-      userDetails: req.user
-        ? { id: req.user._id, email: req.user.email }
-        : null,
-      hasText: !!text,
-      hasImage: !!image,
-      hasVideo: !!video,
-      hasAudio: !!audio,
-      hasFile: !!file,
-    });
-
     // Validate authentication
     if (!req.user || !senderId) {
       return res.status(401).json({ error: "Authentication required" });
@@ -339,98 +335,32 @@ export const sendMessage = async (req, res) => {
       return res.status(400).json({ error: "Invalid receiver ID format" });
     }
 
-    let imageUrl,
-      videoUrl,
-      audioUrl,
-      fileUrl,
-      mediaType = "text";
+    let imageUrl, videoUrl, audioUrl, fileUrl, mediaType = "text";
 
-    /**
-     * Upload media files lên Cloudinary (cloud storage)
-     * Frontend gửi file dạng base64, backend upload lên cloud
-     */
-    if (image) {
-      // Upload base64 image to cloudinary
-      const uploadResponse = await cloudinary.uploader.upload(image);
-      imageUrl = uploadResponse.secure_url;
-      mediaType = "image";
-    }
-
-    if (video) {
-      console.log("Processing video upload...");
-      console.log("Video data prefix:", video.substring(0, 100));
-
-      // Validate base64 video format
-      if (!video.startsWith("data:video/")) {
-        console.error("Invalid video format - not a video base64");
-        return res.status(400).json({ error: "Invalid video format" });
+    try {
+      if (image) {
+        imageUrl = await uploadMedia(image, "image");
+        mediaType = "image";
       }
-
-      // Upload base64 video to cloudinary with increased timeout and chunking
-      const uploadResponse = await cloudinary.uploader.upload(video, {
-        resource_type: "video",
-        timeout: 600000, // 10 minutes timeout cho file lớn
-        chunk_size: 6000000, // 6MB chunks
-        eager: [
-          { quality: "auto", fetch_format: "auto" }, // Auto optimization
-        ],
-      });
-      videoUrl = uploadResponse.secure_url;
-      mediaType = "video";
-      console.log("Video uploaded successfully:", videoUrl);
-    }
-
-    if (audio) {
-      console.log("Processing audio upload...");
-      console.log("Audio duration:", audioDuration, "seconds");
-
-      // Validate base64 audio format
-      if (!audio.startsWith("data:audio/")) {
-        console.error("Invalid audio format - not an audio base64");
-        return res.status(400).json({ error: "Invalid audio format" });
+      if (video) {
+        videoUrl = await uploadMedia(video, "video");
+        mediaType = "video";
       }
-
-      // Upload base64 audio to cloudinary
-      const uploadResponse = await cloudinary.uploader.upload(audio, {
-        resource_type: "video", // Cloudinary treats audio as video resource
-        timeout: 300000, // 5 minutes timeout for audio
-        folder: "chat_app_audio",
-        eager: [
-          { quality: "auto", fetch_format: "auto" }, // Auto optimization
-        ],
-      });
-      audioUrl = uploadResponse.secure_url;
-      mediaType = "audio";
-      console.log("Audio uploaded successfully:", audioUrl);
+      if (audio) {
+        audioUrl = await uploadMedia(audio, "audio");
+        mediaType = "audio";
+      }
+      if (file) {
+        fileUrl = await uploadMedia(file, "file");
+        mediaType = "file";
+      }
+    } catch (uploadError) {
+      if (uploadError.message.includes("Invalid")) {
+        return res.status(400).json({ error: uploadError.message });
+      }
+      throw uploadError;
     }
 
-    if (file) {
-      console.log("Processing file upload...");
-      console.log("File info:", { fileName, fileSize, fileType });
-
-      // Upload general file to cloudinary
-      const uploadResponse = await cloudinary.uploader.upload(file, {
-        resource_type: "auto", // Auto detect resource type
-        timeout: 600000, // 10 minutes timeout
-        chunk_size: 6000000, // 6MB chunks
-        folder: "chat_app_files",
-      });
-      fileUrl = uploadResponse.secure_url;
-      mediaType = "file";
-      console.log("File uploaded successfully:", fileUrl);
-    }
-
-    console.log("💾 Creating message with data:", {
-      senderId,
-      receiverId,
-      text,
-      messageType: "direct",
-      hasImage: !!imageUrl,
-      hasVideo: !!videoUrl,
-      hasAudio: !!audioUrl,
-      hasFile: !!fileUrl,
-      mediaType,
-    });
 
     const newMessage = new Message({
       senderId,
@@ -474,42 +404,19 @@ export const sendMessage = async (req, res) => {
           status: "accepted",
         });
         await friendship.save();
-        console.log("✅ Auto-created friendship between", senderId, "and", receiverId);
       }
     }
-
-    console.log("💾 Saving message to database...");
     await newMessage.save();
-    console.log("✅ Message saved successfully:", newMessage._id);
-
-    // Populate sender info before emitting
-    console.log("👤 Populating sender info...");
     await newMessage.populate("senderId", "fullName profilePic");
-    console.log("✅ Sender info populated");
 
     const receiverSocketId = getReceiverSocketId(receiverId);
-    console.log("🔍 Broadcasting message:", {
-      receiverId,
-      receiverSocketId,
-      messageId: newMessage._id,
-      timestamp: new Date().toISOString(),
-    });
-
     if (receiverSocketId) {
       emitToSocket(receiverSocketId, "newMessage", newMessage);
-      console.log("📤 Message broadcasted to:", receiverSocketId);
-    } else {
-      console.log("❌ Receiver not found online:", receiverId);
     }
 
     res.status(201).json(newMessage);
   } catch (error) {
-    console.error("❌ Error in sendMessage controller:");
-    console.error("Error message:", error.message);
-    console.error("Error stack:", error.stack);
-    console.error("Request body keys:", Object.keys(req.body));
-    console.error("Request params:", req.params);
-    console.error("User ID:", req.user?._id);
+    console.error("Error in sendMessage:", error.message);
 
     // Handle specific error types
     if (error.message?.includes("File size too large")) {
@@ -591,7 +498,6 @@ export const addReaction = async (req, res) => {
 
     res.status(200).json(updatedMessage);
   } catch (error) {
-    console.log("Error in addReaction controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -623,8 +529,6 @@ export const editMessage = async (req, res) => {
 
     // Update message
     message.text = text.trim();
-    message.isEdited = true;
-    message.editedAt = new Date();
     await message.save();
 
     // Emit to both sender and receiver
@@ -640,7 +544,6 @@ export const editMessage = async (req, res) => {
 
     res.status(200).json(message);
   } catch (error) {
-    console.log("Error in editMessage controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -693,7 +596,6 @@ export const deleteMessage = async (req, res) => {
 
     res.status(200).json({ message: "Message deleted successfully" });
   } catch (error) {
-    console.log("Error in deleteMessage controller: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

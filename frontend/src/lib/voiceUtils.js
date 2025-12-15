@@ -51,8 +51,7 @@ export class VoiceRecorder {
         }
       };
 
-      this.mediaRecorder.start(100); // Collect data every 100ms
-      console.log("Voice recording started");
+      this.mediaRecorder.start(100);
       return true;
     } catch (error) {
       console.error("Error starting voice recording:", error);
@@ -91,12 +90,6 @@ export class VoiceRecorder {
           lastModified: Date.now(),
         });
 
-        console.log(
-          "Voice recording stopped, size:",
-          (audioFile.size / 1024).toFixed(2),
-          "KB"
-        );
-
         // Cleanup
         this.cleanup();
         resolve(audioFile);
@@ -122,7 +115,6 @@ export class VoiceRecorder {
       this.isRecording = false;
     }
     this.cleanup();
-    console.log("Voice recording cancelled");
   }
 
   /**

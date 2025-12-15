@@ -31,20 +31,15 @@ const ChatHeader = () => {
     }
   };
 
-  // Simple voice call function
   const handleVoiceCall = () => {
-    console.log("📞 Voice call button clicked");
-
     if (!selectedUser) {
       toast.error("No user selected");
       return;
     }
 
-    // Use global voice call manager
     if (window.voiceCallManager) {
       try {
         window.voiceCallManager.initiateCall(selectedUser._id);
-        console.log("📞 Call initiated to:", selectedUser.fullName);
         toast("Calling " + selectedUser.fullName);
       } catch (error) {
         console.error("Call error:", error);

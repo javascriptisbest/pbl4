@@ -4,8 +4,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import ChatHeader from "./ChatHeader";
 import MessageInputSimple from "./MessageInputSimple";
 import ImageModal from "./ImageModal";
-import MessageActions, { MessageReactions } from "./MessageActions";
-import { formatMessageTime } from "../lib/utils";
+import MessageBubble from "./MessageBubble";
 
 const ChatContainer = () => {
   const {
@@ -111,215 +110,19 @@ const ChatContainer = () => {
 
       <div className="flex-1 overflow-y-auto space-y-1 scroll-smooth">
         {messages.map((message) => {
-          // Fix: senderId là object, cần lấy _id
-          const messageSenderId =
-            typeof message.senderId === "object"
-              ? message.senderId._id
-              : message.senderId;
-
+          const messageSenderId = typeof message.senderId === "object" ? message.senderId._id : message.senderId;
           const isMyMessage = messageSenderId === authUser?._id;
 
           return (
-            <div
+            <MessageBubble
               key={message._id}
-              className={`group flex w-full px-3 py-1 ${
-                isMyMessage ? "justify-end" : "justify-start"
-              }`}
-            >
-              <div
-                className={`flex max-w-[70%] items-end gap-2 ${
-                  isMyMessage ? "flex-row-reverse" : "flex-row"
-                }`}
-              >
-                {/* Avatar - hiển thị cho cả 2 bên */}
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium shadow-sm flex-shrink-0">
-                  {isMyMessage ? (
-                    authUser?.profilePic ? (
-                      <img
-                        src={authUser.profilePic}
-                        alt={authUser.fullName}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-xs font-bold">
-                        {authUser?.fullName?.charAt(0)}
-                      </span>
-                    )
-                  ) : // Sử dụng thông tin từ message.senderId object
-                  typeof message.senderId === "object" &&
-                    message.senderId.profilePic ? (
-                    <img
-                      src={message.senderId.profilePic}
-                      alt={message.senderId.fullName}
-                      className="w-full h-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-xs font-bold">
-                      {typeof message.senderId === "object"
-                        ? message.senderId.fullName?.charAt(0)
-                        : selectedUser?.fullName?.charAt(0)}
-                    </span>
-                  )}
-                </div>
-
-                <div
-                  className={`flex flex-col ${
-                    isMyMessage ? "items-end" : "items-start"
-                  }`}
-                >
-                  {/* Message Actions - hiển thị khi hover */}
-                  <div className={`flex items-center gap-1 ${isMyMessage ? "flex-row-reverse" : "flex-row"}`}>
-                    {/* Text Bubble - chỉ cho text */}
-                    {message.text && (
-                      <div
-                        className={`relative px-4 py-3 rounded-2xl shadow-sm max-w-xs break-words ${
-                          isMyMessage ? "rounded-br-md" : "rounded-bl-md border"
-                        } ${message.isDeleted ? "opacity-60 italic" : ""}`}
-                        style={{
-                          background: isMyMessage
-                            ? "var(--message-sent)"
-                            : "var(--message-received)",
-                          color: isMyMessage
-                            ? "var(--message-text-sent)"
-                            : "var(--message-text-received)",
-                          borderColor: !isMyMessage
-                            ? "var(--border-primary)"
-                            : "none",
-                        }}
-                      >
-                        <p className="text-sm leading-relaxed">{message.text}</p>
-                        {message.isEdited && !message.isDeleted && (
-                          <span className="text-[10px] opacity-60 ml-1">(đã sửa)</span>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Actions button */}
-                    {!message.isDeleted && (
-                      <MessageActions
-                        message={message}
-                        isMyMessage={isMyMessage}
-                        onEdit={(msg) => setEditingMessage(msg)}
-                      />
-                    )}
-                  </div>
-                  
-                  {/* Reactions */}
-                  <MessageReactions
-                    reactions={message.reactions}
-                    onReactionClick={(emoji) => {
-                      const { addReaction } = useChatStore.getState();
-                      addReaction(message._id, emoji);
-                    }}
-                  />
-
-                  {/* Image - ngoài bubble, to hơn */}
-                  {message.image && (
-                    <div
-                      className={`${
-                        message.text ? "mt-1" : ""
-                      } rounded-lg overflow-hidden shadow-sm`}
-                    >
-                      <img
-                        src={message.image}
-                        alt="Shared image"
-                        className="max-w-[400px] max-h-[400px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity object-cover"
-                        onClick={() => handleImageClick(message.image)}
-                      />
-                    </div>
-                  )}
-
-                  {/* Video - ngoài bubble, to hơn */}
-                  {message.video && (
-                    <div
-                      className={`${
-                        message.text || message.image ? "mt-1" : ""
-                      } rounded-lg overflow-hidden shadow-sm`}
-                    >
-                      <video
-                        src={message.video}
-                        controls
-                        className="max-w-[400px] rounded-lg"
-                        style={{ maxHeight: "300px" }}
-                      >
-                        Trình duyệt không hỗ trợ video
-                      </video>
-                    </div>
-                  )}
-
-                  {message.audio && (
-                    <div
-                      className={`${
-                        message.text || message.image || message.video
-                          ? "mt-1"
-                          : ""
-                      } flex items-center space-x-2 bg-white border border-gray-200 rounded-lg p-3 shadow-sm`}
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          isMyMessage ? "bg-blue-100" : "bg-gray-100"
-                        }`}
-                      >
-                        🎵
-                      </div>
-                      <audio src={message.audio} controls className="flex-1">
-                        Trình duyệt không hỗ trợ audio
-                      </audio>
-                      {message.audioDuration && (
-                        <span className="text-xs text-gray-500">
-                          {Math.floor(message.audioDuration / 60)}:
-                          {(message.audioDuration % 60)
-                            .toString()
-                            .padStart(2, "0")}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {message.file && (
-                    <div
-                      className={`${
-                        message.text ||
-                        message.image ||
-                        message.video ||
-                        message.audio
-                          ? "mt-1"
-                          : ""
-                      } flex items-center space-x-3 bg-white border border-gray-200 rounded-lg p-3 shadow-sm max-w-[300px]`}
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                        📄
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {message.fileName || "Tài liệu"}
-                        </p>
-                        {message.fileSize && (
-                          <p className="text-xs text-gray-500">
-                            {(message.fileSize / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => window.open(message.file, "_blank")}
-                        className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                      >
-                        Tải
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Timestamp */}
-                  <div
-                    className={`text-xs text-gray-500 px-1 ${
-                      isMyMessage ? "text-right" : "text-left"
-                    }`}
-                  >
-                    {formatMessageTime(message.createdAt)}
-                  </div>
-                </div>
-              </div>
-            </div>
+              message={message}
+              isMyMessage={isMyMessage}
+              authUser={authUser}
+              selectedUser={selectedUser}
+              onImageClick={handleImageClick}
+              onEdit={setEditingMessage}
+            />
           );
         })}
         <div ref={messagesEndRef} />
@@ -355,10 +158,9 @@ const ChatContainer = () => {
   );
 };
 
-// Edit Message Modal Component
+// Edit Message Modal Component - Đơn giản nhất
 const EditMessageModal = ({ message, onClose }) => {
   const [text, setText] = useState(message.text || "");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { editMessage } = useChatStore();
   const inputRef = useRef(null);
 
@@ -369,22 +171,25 @@ const EditMessageModal = ({ message, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!text.trim() || isSubmitting) return;
+    if (!text.trim()) return;
     
-    setIsSubmitting(true);
     try {
       await editMessage(message._id, text.trim());
       onClose();
     } catch (error) {
-      // Error already handled in store
-    } finally {
-      setIsSubmitting(false);
+      // Error đã được xử lý trong store
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape") {
+      onClose();
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-semibold mb-4">Chỉnh sửa tin nhắn</h3>
         
         <form onSubmit={handleSubmit}>
@@ -392,6 +197,7 @@ const EditMessageModal = ({ message, onClose }) => {
             ref={inputRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="w-full border border-gray-300 rounded-lg p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={3}
             placeholder="Nhập nội dung tin nhắn..."
@@ -401,16 +207,16 @@ const EditMessageModal = ({ message, onClose }) => {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
             >
               Hủy
             </button>
             <button
               type="submit"
-              disabled={!text.trim() || isSubmitting}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={!text.trim()}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
             >
-              {isSubmitting ? "Đang lưu..." : "Lưu"}
+              Lưu
             </button>
           </div>
         </form>

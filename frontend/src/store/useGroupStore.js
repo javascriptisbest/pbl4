@@ -21,7 +21,6 @@ export const useGroupStore = create((set, get) => ({
 
     // Prevent duplicate loading
     if (isGroupsLoading && !forceRefresh) {
-      console.log("⏳ Groups already loading, skipping duplicate request");
       return;
     }
 
@@ -31,7 +30,6 @@ export const useGroupStore = create((set, get) => ({
       groupsCacheTime &&
       now - groupsCacheTime < CACHE_DURATION
     ) {
-      console.log("📋 Using cached groups data");
       set({ groups: groupsCache });
       return;
     }
@@ -49,12 +47,8 @@ export const useGroupStore = create((set, get) => ({
         groupsCacheTime: now,
       });
 
-      console.log(`👥 Groups loaded in ${Date.now() - startTime}ms`);
     } catch (error) {
-      console.error("Error loading groups:", error);
-      // Fallback to cache nếu có lỗi network
       if (groupsCache && Array.isArray(groupsCache)) {
-        console.log("📋 Network error, using cached groups");
         set({ groups: groupsCache });
       } else {
         // Ensure groups is always an array, even on error

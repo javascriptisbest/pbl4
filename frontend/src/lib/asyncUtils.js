@@ -183,7 +183,7 @@ export class AsyncCache {
   }
 }
 
-// Global instances
-export const messageBatcher = new AsyncBatcher(20, 50); // Batch messages
-export const imageBatcher = new AsyncBatcher(5, 200); // Batch image operations
-export const apiCache = new AsyncCache(30000); // 30s API cache
+// Global instances (nếu cần dùng sau này)
+// export const messageBatcher = new AsyncBatcher(20, 50);
+// export const imageBatcher = new AsyncBatcher(5, 200);
+// export const apiCache = new AsyncCache(30000);

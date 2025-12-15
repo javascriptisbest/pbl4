@@ -37,19 +37,8 @@ export const useAuthStore = create((set, get) => ({
 
       set({ authUser: res.data });
       get().connectSocket();
-
-      console.log(`✅ Auth check completed in ${Date.now() - startTime}ms`);
     } catch (error) {
-      console.log("Error in checkAuth:", error);
       set({ authUser: null });
-
-      // Nếu timeout hoặc network error, vẫn cho user vào offline mode
-      if (
-        error.message === "Auth check timeout" ||
-        error.code === "NETWORK_ERROR"
-      ) {
-        console.log("🔄 Running in offline mode");
-      }
     } finally {
       set({ isCheckingAuth: false });
     }
@@ -81,7 +70,6 @@ export const useAuthStore = create((set, get) => ({
       const errorMessage =
         error.response?.data?.message || error.message || "Login failed";
       toast.error(errorMessage);
-      console.error("Login error:", error);
     } finally {
       set({ isLoggingIn: false });
     }
@@ -105,7 +93,6 @@ export const useAuthStore = create((set, get) => ({
       set({ authUser: res.data });
       toast.success("Profile updated successfully");
     } catch (error) {
-      console.log("error in update profile:", error);
       toast.error(error.response.data.message);
     } finally {
       set({ isUpdatingProfile: false });
@@ -116,26 +103,18 @@ export const useAuthStore = create((set, get) => ({
     const { authUser } = get();
     if (!authUser) return;
 
-    // Disconnect existing socket first to prevent conflicts
     const existingSocket = get().socket;
     if (existingSocket) {
-      console.log("🔄 Disconnecting existing socket before reconnecting...");
       existingSocket.removeAllListeners();
       existingSocket.disconnect();
       set({ socket: null });
     }
 
-    // Force clear any cached URLs for fresh detection
     if (typeof window !== "undefined" && window.clearURLCache) {
       window.clearURLCache();
     }
 
     const socketURL = getSocketURL();
-    console.log("🔌 Auth socket connecting to:", socketURL, {
-      location: window?.location?.href,
-      timestamp: Date.now(),
-      version: "auth-v3.0",
-    });
 
     const socket = createWebSocket(socketURL, {
       query: {
@@ -154,24 +133,15 @@ export const useAuthStore = create((set, get) => ({
       console.error("❌ Socket connection error:", error.message);
     });
 
-    socket.on("reconnect_attempt", (attemptNumber) => {
-      console.log(`🔄 Socket reconnection attempt ${attemptNumber}`);
-    });
-
-    socket.on("reconnect", (attemptNumber) => {
-      console.log(`✅ Socket reconnected after ${attemptNumber} attempts`);
-    });
 
     socket.on("reconnect_failed", () => {
       console.error("❌ Socket reconnection failed");
     });
 
     socket.on("connect", () => {
-      console.log("✅ Socket connected successfully, ID:", socket.id);
     });
 
     socket.on("disconnect", (reason) => {
-      console.log("📴 Socket disconnected:", reason);
       if (reason === "io server disconnect") {
         // Server disconnected, try to reconnect
         socket.connect();
@@ -242,7 +212,6 @@ export const useAuthStore = create((set, get) => ({
 
     // Listen for friend accepted event - tự động refresh danh sách bạn bè
     socket.on("friendAccepted", (data) => {
-      console.log("✅ Friend accepted event received:", data);
       
       // Refresh danh sách users trong chat store để bạn mới hiện ngay
       import("../store/useChatStore.js").then((module) => {

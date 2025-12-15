@@ -18,15 +18,11 @@ import User from "../models/user.model.js";
 export const protectRoute = async (req, res, next) => {
   try {
     // Debug: Log all cookies and headers
-    console.log("🍪 Request cookies:", req.cookies);
-    console.log("🔗 Request origin:", req.get("origin"));
-    console.log("📋 All headers:", Object.keys(req.headers));
 
     // Lấy JWT token từ cookie (HTTP-only cookie cho security)
     const token = req.cookies.jwt;
 
     if (!token) {
-      console.log("❌ No JWT token found in cookies");
       return res
         .status(401)
         .json({ message: "Unauthorized - No Token Provided" });

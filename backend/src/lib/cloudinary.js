@@ -24,8 +24,6 @@ export const uploadWithRetry = async (file, options = {}, maxRetries = 3) => {
       return await cloudinary.uploader.upload(file, options);
     } catch (error) {
       lastError = error;
-      console.log(`Upload attempt ${attempt} failed:`, error.message);
-
       if (attempt < maxRetries) {
         // Exponential backoff: 1s, 2s, 4s
         await new Promise((resolve) =>
