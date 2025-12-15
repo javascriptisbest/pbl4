@@ -163,11 +163,23 @@ const MessageInputSimple = ({ onSendMessage }) => {
 
       {/* Upload Progress */}
       {media.isUploading && (
-        <div className="mb-3">
-          <div className="flex items-center gap-2">
+        <div className="mb-3 p-3 bg-base-200 rounded-2xl">
+          <div className="flex items-center gap-2 mb-2">
             <span className="loading loading-spinner loading-sm text-primary"></span>
             <span className="text-sm font-medium">{media.uploadProgress}</span>
           </div>
+          {media.uploadPercent > 0 && (
+            <div className="w-full">
+              <progress 
+                className="progress progress-primary w-full" 
+                value={media.uploadPercent} 
+                max="100"
+              ></progress>
+              <div className="text-xs text-base-content/70 mt-1 text-right">
+                {media.uploadPercent}%
+              </div>
+            </div>
+          )}
         </div>
       )}
 

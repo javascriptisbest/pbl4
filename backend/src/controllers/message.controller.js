@@ -3,6 +3,7 @@
  * Xử lý các API endpoints liên quan đến tin nhắn
  */
 
+import mongoose from "mongoose";
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import Friend from "../models/friend.model.js";
@@ -335,6 +336,15 @@ export const sendMessage = async (req, res) => {
       return res.status(400).json({ error: "Invalid receiver ID format" });
     }
 
+    // Validate senderId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(senderId)) {
+      return res.status(400).json({ error: "Invalid sender ID format" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+      return res.status(400).json({ error: "Invalid receiver ID format" });
+    }
+
     let imageUrl, videoUrl, audioUrl, fileUrl, mediaType = "text";
 
     try {
@@ -355,10 +365,27 @@ export const sendMessage = async (req, res) => {
         mediaType = "file";
       }
     } catch (uploadError) {
-      if (uploadError.message.includes("Invalid")) {
+      console.error("Upload error:", uploadError);
+      
+      // Handle specific upload errors
+      if (uploadError.message?.includes("Invalid")) {
         return res.status(400).json({ error: uploadError.message });
+      } else if (uploadError.message?.includes("File size too large")) {
+        return res.status(413).json({ 
+          error: uploadError.message || "File size too large. Please use a smaller file." 
+        });
+      } else if (uploadError.message?.includes("timeout") || uploadError.message?.includes("Upload timeout")) {
+        return res.status(408).json({ 
+          error: uploadError.message || "Upload timeout. Please try a smaller file or check your connection." 
+        });
+      } else if (uploadError.message?.includes("Upload failed")) {
+        return res.status(500).json({ 
+          error: uploadError.message || "Failed to upload file. Please try again." 
+        });
+      } else {
+        // Re-throw to be caught by outer catch block
+        throw uploadError;
       }
-      throw uploadError;
     }
 
 
@@ -406,35 +433,83 @@ export const sendMessage = async (req, res) => {
         await friendship.save();
       }
     }
-    await newMessage.save();
-    await newMessage.populate("senderId", "fullName profilePic");
+    // Verify sender exists before saving
+    const senderExists = await User.findById(senderId);
+    if (!senderExists) {
+      return res.status(404).json({ error: "Sender user not found" });
+    }
 
-    const receiverSocketId = getReceiverSocketId(receiverId);
-    if (receiverSocketId) {
-      emitToSocket(receiverSocketId, "newMessage", newMessage);
+    // Verify receiver exists
+    const receiverExists = await User.findById(receiverId);
+    if (!receiverExists) {
+      return res.status(404).json({ error: "Receiver user not found" });
+    }
+
+    try {
+      await newMessage.save();
+    } catch (saveError) {
+      console.error("Error saving message to database:", saveError);
+      console.error("Save error details:", {
+        name: saveError.name,
+        code: saveError.code,
+        errors: saveError.errors,
+      });
+      throw new Error(`Failed to save message: ${saveError.message}`);
+    }
+
+    try {
+      await newMessage.populate("senderId", "fullName profilePic");
+    } catch (populateError) {
+      console.error("Error populating senderId:", populateError);
+      // Continue without populate - message is saved, just send without populated data
+      console.warn("Message saved but senderId population failed");
+    }
+
+    try {
+      const receiverSocketId = getReceiverSocketId(receiverId);
+      if (receiverSocketId) {
+        emitToSocket(receiverSocketId, "newMessage", newMessage);
+      }
+    } catch (socketError) {
+      console.error("Error emitting socket event:", socketError);
+      // Don't fail the request if socket emission fails
+      console.warn("Message saved but socket emission failed");
     }
 
     res.status(201).json(newMessage);
   } catch (error) {
     console.error("Error in sendMessage:", error.message);
+    console.error("Error stack:", error.stack);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      status: error.status,
+    });
 
     // Handle specific error types
     if (error.message?.includes("File size too large")) {
-      res
-        .status(413)
-        .json({ error: "Video file is too large. Please use a smaller file." });
-    } else if (error.message?.includes("timeout")) {
-      res
-        .status(408)
-        .json({ error: "Upload timeout. Please try a smaller video." });
-    } else if (error.message?.includes("Invalid video format")) {
-      res
-        .status(400)
-        .json({ error: "Invalid video format. Please use MP4, AVI, or MOV." });
+      res.status(413).json({ 
+        error: error.message || "File is too large. Please use a smaller file." 
+      });
+    } else if (error.message?.includes("timeout") || error.message?.includes("Upload timeout")) {
+      res.status(408).json({ 
+        error: error.message || "Upload timeout. Please try a smaller file." 
+      });
+    } else if (error.message?.includes("Invalid")) {
+      res.status(400).json({ 
+        error: error.message || "Invalid file format." 
+      });
+    } else if (error.message?.includes("Upload failed")) {
+      res.status(500).json({ 
+        error: error.message || "Failed to upload file. Please try again." 
+      });
     } else {
+      // More detailed error response in development, generic in production
       res.status(500).json({
         error: "Internal server error",
-        message: error.message,
+        message: process.env.NODE_ENV === "development" ? error.message : "Failed to send message. Please try again.",
+        ...(process.env.NODE_ENV === "development" && { stack: error.stack }),
         timestamp: new Date().toISOString(),
       });
     }

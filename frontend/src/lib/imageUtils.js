@@ -25,11 +25,23 @@ export const compressImage = async (imageFile, options = {}) => {
   }
 };
 
-export const fileToBase64 = (file) => {
+export const fileToBase64 = (file, onProgress) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    
     reader.onloadend = () => resolve(reader.result);
     reader.onerror = reject;
+    
+    // Track progress for large files (especially videos)
+    if (onProgress && file.size > 5 * 1024 * 1024) { // Only track for files > 5MB
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          onProgress(percentComplete);
+        }
+      };
+    }
+    
     reader.readAsDataURL(file); // Read file as Data URL (base64)
   });
 };
