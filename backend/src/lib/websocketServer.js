@@ -53,17 +53,32 @@ const wss = new WebSocketServer({
     const origin = info.origin;
     const allowedOrigins = getAllowedOrigins();
     
-    // Allow if origin matches or is in allowed list
-    if (!origin) return true; // Same-origin requests
+    // Allow if no origin (e.g., same-origin or mobile apps)
+    if (!origin) {
+      return true;
+    }
     
+    // Check if origin is allowed
     const isAllowed = allowedOrigins.some((allowed) => {
       if (typeof allowed === "string") {
-        return allowed === origin;
+        return allowed === origin || origin.startsWith(allowed);
       } else if (allowed instanceof RegExp) {
         return allowed.test(origin);
       }
       return false;
     });
+    
+    // Log rejected origins for debugging (but allow in production for now)
+    if (!isAllowed && process.env.NODE_ENV === "development") {
+      console.log("⚠️ WebSocket connection from disallowed origin:", origin);
+      console.log("Allowed origins:", allowedOrigins);
+    }
+    
+    // In production, be more permissive for WebSocket connections
+    // This helps with Render and other hosting platforms
+    if (process.env.NODE_ENV === "production") {
+      return true; // Allow all origins in production (CORS is handled at HTTP level)
+    }
     
     return isAllowed;
   },

@@ -36,8 +36,13 @@ export class WebSocketClient {
       wsUrl = `ws://${wsUrl}`;
     }
 
+    // Remove trailing slash if present
+    wsUrl = wsUrl.replace(/\/$/, "");
+
     const queryString = new URLSearchParams(this.query).toString();
     wsUrl = `${wsUrl}${queryString ? `?${queryString}` : ""}`;
+    
+    console.log(`🔌 Connecting to WebSocket: ${wsUrl.replace(/\?userId=[^&]*/, '?userId=***')}`);
 
     try {
       this.ws = new WebSocket(wsUrl);
@@ -54,6 +59,7 @@ export class WebSocketClient {
         clearTimeout(timeoutId);
         this.connected = true;
         this.reconnectAttempts = 0;
+        console.log("✅ WebSocket connected successfully");
         this.trigger("connect");
         this.startPing();
       };
@@ -69,11 +75,16 @@ export class WebSocketClient {
 
       this.ws.onerror = (error) => {
         clearTimeout(timeoutId);
-        // Chỉ log error thực sự, không log connection errors thông thường
-        if (error.type !== "error" || this.ws.readyState !== WebSocket.CONNECTING) {
-          console.error("WebSocket error:", error);
+        // Create a more descriptive error message
+        const errorMessage = error.message || "server error";
+        const wsError = new Error(`WebSocket connection failed: ${errorMessage}`);
+        wsError.code = this.ws.readyState === WebSocket.CLOSED ? "CLOSED" : "CONNECTING";
+        
+        // Only log if not a normal connection error during connecting state
+        if (this.ws.readyState !== WebSocket.CONNECTING) {
+          console.error("WebSocket error:", wsError);
         }
-        this.trigger("connect_error", error);
+        this.trigger("connect_error", wsError);
       };
 
       this.ws.onclose = (event) => {
@@ -96,7 +107,8 @@ export class WebSocketClient {
       };
     } catch (error) {
       console.error("Error creating WebSocket:", error);
-      this.emit("connect_error", error);
+      const wsError = new Error(`Failed to create WebSocket: ${error.message || "Unknown error"}`);
+      this.trigger("connect_error", wsError);
     }
   }
 

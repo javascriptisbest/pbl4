@@ -130,15 +130,19 @@ export const useAuthStore = create((set, get) => ({
 
     // Error handling
     socket.on("connect_error", (error) => {
-      console.error("❌ Socket connection error:", error.message);
+      const errorMsg = error?.message || error || "Unknown error";
+      console.error("❌ Socket connection error:", errorMsg);
+      // Don't show toast for connection errors during initial connection attempts
+      // Toast will be shown if max reconnect attempts are reached
     });
 
-
     socket.on("reconnect_failed", () => {
-      console.error("❌ Socket reconnection failed");
+      console.error("❌ Socket reconnection failed - max attempts reached");
+      toast.error("Không thể kết nối với server. Vui lòng tải lại trang.");
     });
 
     socket.on("connect", () => {
+      console.log("✅ Socket connected successfully");
     });
 
     socket.on("disconnect", (reason) => {
@@ -148,6 +152,7 @@ export const useAuthStore = create((set, get) => ({
       }
     });
 
+    // Connect socket first
     socket.connect();
 
     // instantiate voice call manager and wire incoming call -> open modal

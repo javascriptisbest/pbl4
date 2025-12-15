@@ -43,6 +43,14 @@ export class VoiceCallManager {
    * Lắng nghe các signaling events từ server
    */
   setupSocketListeners() {
+    // Listen for socket connection errors
+    this.socket.on("connect_error", (error) => {
+      console.error("❌ Voice call socket connection error:", error?.message || "server error");
+    });
+
+    this.socket.on("connect", () => {
+      console.log("🔧 Voice call socket connected");
+    });
     /**
      * Event: voice-call-incoming
      * Nhận cuộc gọi đến từ user khác
