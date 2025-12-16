@@ -91,66 +91,27 @@ const MessageInputSimple = ({ onSendMessage }) => {
     let videoUrl = media.videoPreview;
     let fileUrl = media.filePreview;
 
-    // Nếu video là object URL (chưa upload), gửi ngay và upload background
+    // Nếu video là object URL (chưa upload), upload TRƯỚC khi gửi (không hiển thị progress)
     if (videoFile && media.videoPreview?.startsWith('blob:')) {
-      // Upload background, không block UI
-      uploadToCloudinary(videoFile, "video")
-        .then((uploadedUrl) => {
-          // Update message trong store với Cloudinary URL
-          const { useChatStore } = require("../store/useChatStore");
-          const store = useChatStore.getState();
-          const messages = store.messages;
-          const updatedMessages = messages.map(msg => {
-            if (msg.video === media.videoPreview) {
-              return { ...msg, video: uploadedUrl };
-            }
-            return msg;
-          });
-          store.set({ messages: updatedMessages });
-          
-          // Update cache
-          const { messagesCache, selectedUser } = store;
-          if (selectedUser && messagesCache[selectedUser._id]) {
-            store.set({
-              messagesCache: {
-                ...messagesCache,
-                [selectedUser._id]: {
-                  ...messagesCache[selectedUser._id],
-                  messages: updatedMessages,
-                },
-              },
-            });
-          }
-        })
-        .catch((error) => {
-          console.error("Background video upload failed:", error);
-          // Không hiển thị error để không làm phiền user
-        });
-      
-      // Gửi ngay với object URL tạm
-      videoUrl = media.videoPreview;
+      try {
+        // Upload trước, đợi xong (không hiển thị progress bar)
+        videoUrl = await uploadToCloudinary(videoFile, "video");
+      } catch (error) {
+        console.error("Video upload failed:", error);
+        toast.error("Không thể tải video. Vui lòng thử lại.");
+        return; // Dừng lại, không gửi message
+      }
     }
 
-    // Tương tự cho file
+    // Tương tự cho file lớn
     if (fileObject && media.filePreview?.startsWith('blob:')) {
-      uploadToCloudinary(fileObject, "file")
-        .then((uploadedUrl) => {
-          const { useChatStore } = require("../store/useChatStore");
-          const store = useChatStore.getState();
-          const messages = store.messages;
-          const updatedMessages = messages.map(msg => {
-            if (msg.file === media.filePreview) {
-              return { ...msg, file: uploadedUrl };
-            }
-            return msg;
-          });
-          store.set({ messages: updatedMessages });
-        })
-        .catch((error) => {
-          console.error("Background file upload failed:", error);
-        });
-      
-      fileUrl = media.filePreview;
+      try {
+        fileUrl = await uploadToCloudinary(fileObject, "file");
+      } catch (error) {
+        console.error("File upload failed:", error);
+        toast.error("Không thể tải file. Vui lòng thử lại.");
+        return;
+      }
     }
 
     const messageData = {

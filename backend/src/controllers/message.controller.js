@@ -358,17 +358,11 @@ export const sendMessage = async (req, res) => {
         mediaType = "image";
       }
       if (video) {
-        // Check if it's already a Cloudinary URL or object URL
-        // Object URLs (blob:) sẽ được upload background từ frontend
-        // Nếu là blob URL, chấp nhận và lưu tạm (sẽ được update sau)
+        // Check if it's already a Cloudinary URL (http/https)
         if (video.startsWith('http')) {
           videoUrl = video; // Đã là Cloudinary URL
-        } else if (video.startsWith('blob:')) {
-          // Object URL - chấp nhận tạm, frontend sẽ upload background
-          // Tạm thời lưu với note để update sau
-          videoUrl = video; // Frontend sẽ handle upload và update sau
         } else {
-          // Base64 - upload như cũ
+          // Base64 - upload như cũ (fallback)
           videoUrl = await uploadMedia(video, "video");
         }
         mediaType = "video";
@@ -382,9 +376,11 @@ export const sendMessage = async (req, res) => {
         mediaType = "audio";
       }
       if (file) {
+        // Check if it's already a Cloudinary URL
         if (file.startsWith('http')) {
           fileUrl = file;
         } else {
+          // Base64 - upload như cũ (fallback)
           fileUrl = await uploadMedia(file, "file");
         }
         mediaType = "file";
