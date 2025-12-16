@@ -5,6 +5,7 @@ import { Users, Crown, Clock, Users2 } from "lucide-react";
 import MessageInputSimple from "./MessageInputSimple";
 import ImageModal from "./ImageModal";
 import MessageBubble from "./MessageBubble";
+import { formatMessageTime } from "../lib/utils";
 
 const GroupChatContainer = () => {
   const {
