@@ -73,9 +73,16 @@ const MessageBubble = ({ message, isMyMessage, authUser, selectedUser, onImageCl
 
           {message.video && (
             <div className={`${message.text || message.image ? "mt-1" : ""} rounded-lg overflow-hidden shadow-sm`}>
-              <video src={message.video} controls className="max-w-[400px] rounded-lg" style={{ maxHeight: "300px" }}>
-                Trình duyệt không hỗ trợ video
-              </video>
+              {/* Không render blob URLs vì chúng bị revoked - chỉ hiển thị Cloudinary URLs */}
+              {message.video.startsWith('blob:') ? (
+                <div className="max-w-[400px] rounded-lg bg-gray-100 p-4 text-center text-sm text-gray-500">
+                  Video đang được tải lên...
+                </div>
+              ) : (
+                <video src={message.video} controls className="max-w-[400px] rounded-lg" style={{ maxHeight: "300px" }}>
+                  Trình duyệt không hỗ trợ video
+                </video>
+              )}
             </div>
           )}
 
@@ -96,11 +103,13 @@ const MessageBubble = ({ message, isMyMessage, authUser, selectedUser, onImageCl
               <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">📄</div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{message.fileName || "Tài liệu"}</p>
-                {message.fileSize && <p className="text-xs text-gray-500">{(message.fileSize / 1024 / 1024).toFixed(2)} MB</p>}
+                {message.fileSize && <p className="text-xs text-gray-500">{(typeof message.fileSize === 'number' ? message.fileSize / 1024 / 1024 : parseFloat(message.fileSize.replace(' KB', '')) / 1024).toFixed(2)} MB</p>}
               </div>
-              <button onClick={() => window.open(message.file, "_blank")} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
-                Tải
-              </button>
+              {!message.file.startsWith('blob:') && (
+                <button onClick={() => window.open(message.file, "_blank")} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                  Tải
+                </button>
+              )}
             </div>
           )}
 
