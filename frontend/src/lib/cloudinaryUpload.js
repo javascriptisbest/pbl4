@@ -9,7 +9,7 @@ import { axiosInstance } from "./axios.js";
  * Upload file directly to Cloudinary
  * @param {File} file - File to upload
  * @param {string} type - 'image' | 'video' | 'audio' | 'file'
- * @param {Function} onProgress - Progress callback (percent: number) => void
+ * @param {Function} onProgress - Progress callback (percent: number) => void (không dùng nữa)
  * @returns {Promise<string>} - Secure URL of uploaded file
  */
 export const uploadToCloudinary = async (file, type = "auto", onProgress) => {
@@ -48,25 +48,18 @@ export const uploadToCloudinary = async (file, type = "auto", onProgress) => {
     }
     
     // Add optimization parameters for video
+    // IMPORTANT: All params added here must be included in backend signature
     if (type === "video") {
       if (timeout) formData.append("timeout", timeout);
       if (chunk_size) formData.append("chunk_size", chunk_size);
-      // Enable async upload for better performance
-      formData.append("async", "false"); // false = wait for completion (but still faster)
-    }
-
-    // Add optimizations for video uploads
-    const isVideo = type === "video";
-    const fileSizeMB = file.size / (1024 * 1024);
-    
-    // For large videos, add chunk upload optimization
-    if (isVideo && fileSizeMB > 20) {
-      // Enable chunked upload for large videos (faster and more reliable)
-      formData.append("chunk_size", "10000000"); // 10MB chunks for better performance
+      // Bỏ async parameter vì không được include trong signature
     }
 
     // Upload directly to Cloudinary
     const uploadUrl = `https://api.cloudinary.com/v1_1/${cloud_name}/${resource_type}/upload`;
+
+    const isVideo = type === "video";
+    const fileSizeMB = file.size / (1024 * 1024);
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -78,16 +71,6 @@ export const uploadToCloudinary = async (file, type = "auto", onProgress) => {
         xhr.timeout = 10 * 60 * 1000; // 10 minutes
       } else {
         xhr.timeout = 5 * 60 * 1000; // 5 minutes for other files
-      }
-
-      // Track upload progress with more frequent updates
-      if (onProgress) {
-        xhr.upload.addEventListener("progress", (e) => {
-          if (e.lengthComputable) {
-            const percentComplete = Math.round((e.loaded / e.total) * 100);
-            onProgress(percentComplete);
-          }
-        }, false); // Use capture phase for better performance
       }
 
       xhr.addEventListener("load", () => {
@@ -120,7 +103,7 @@ export const uploadToCloudinary = async (file, type = "auto", onProgress) => {
         reject(new Error("Upload timeout. The file is taking too long to upload. Please try again or use a smaller file."));
       });
 
-      xhr.open("POST", uploadUrl, true); // Async = true for better performance
+      xhr.open("POST", uploadUrl, true);
       xhr.send(formData);
     });
   } catch (error) {

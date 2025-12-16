@@ -23,12 +23,9 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-// Message schema phải khớp với backend/src/models/message.model.js
 const messageSchema = new mongoose.Schema({
   senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  receiverId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Optional for group chat
-  groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group" }, // For group chat
-  messageType: { type: String, enum: ["direct", "group"], default: "direct" },
+  receiverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   text: { type: String },
   image: { type: String },
   video: { type: String },
@@ -36,37 +33,39 @@ const messageSchema = new mongoose.Schema({
   file: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-}, { timestamps: true });
+});
 
-// Group schema phải khớp với backend/src/models/group.model.js
 const groupSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
+  name: { type: String, required: true },
   description: { type: String, default: "" },
   avatar: { type: String, default: "" },
-  members: [
-    {
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-      role: { type: String, enum: ["admin", "member"], default: "member" },
-      joinedAt: { type: Date, default: Date.now },
-    },
-  ],
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  lastMessage: { type: mongoose.Schema.Types.ObjectId, ref: "Message" },
-  lastMessageAt: { type: Date, default: Date.now },
-}, { timestamps: true });
-
-const friendSchema = new mongoose.Schema({
-  requester: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  recipient: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  status: { type: String, enum: ["pending", "accepted", "blocked"], default: "pending" },
+  creator: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  admins: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  lastMessage: {
+    text: String,
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    createdAt: Date,
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+});
+
+const groupMessageSchema = new mongoose.Schema({
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group", required: true },
+  senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  text: { type: String },
+  image: { type: String },
+  video: { type: String },
+  audio: { type: String },
+  file: { type: String },
+  createdAt: { type: Date, default: Date.now },
 });
 
 const User = mongoose.model("User", userSchema);
 const Message = mongoose.model("Message", messageSchema);
 const Group = mongoose.model("Group", groupSchema);
-const Friend = mongoose.model("Friend", friendSchema);
+const GroupMessage = mongoose.model("GroupMessage", groupMessageSchema);
 
 // ===== DỮ LIỆU MẪU =====
 
@@ -265,7 +264,7 @@ const seedDatabase = async () => {
     await User.deleteMany({});
     await Message.deleteMany({});
     await Group.deleteMany({});
-    await Friend.deleteMany({});
+    await GroupMessage.deleteMany({});
     console.log("✅ Đã xóa dữ liệu cũ\n");
 
     // Hash password
@@ -298,7 +297,6 @@ const seedDatabase = async () => {
         await Message.create({
           senderId: createdUsers[msg.from]._id,
           receiverId: createdUsers[msg.to]._id,
-          messageType: "direct",
           text: msg.text,
           createdAt: msgTime,
           updatedAt: msgTime,
@@ -308,228 +306,45 @@ const seedDatabase = async () => {
     }
     console.log(`✅ Đã tạo ${messageCount} tin nhắn\n`);
 
-    // Tạo friend relationships từ messages (những người đã có tin nhắn sẽ tự động là bạn bè)
-    console.log("👫 Tạo bạn bè từ tin nhắn...");
-    const friendPairs = new Set(); // Dùng Set để tránh duplicate
-    // Chỉ lấy direct messages (có receiverId)
-    const allMessages = await Message.find({ messageType: "direct", receiverId: { $exists: true } }).lean();
-    
-    for (const msg of allMessages) {
-      const senderId = msg.senderId.toString();
-      const receiverId = msg.receiverId.toString();
-      // Tạo key để đảm bảo unique (luôn sắp xếp ID nhỏ hơn trước)
-      const pairKey = senderId < receiverId 
-        ? `${senderId}-${receiverId}` 
-        : `${receiverId}-${senderId}`;
-      
-      if (!friendPairs.has(pairKey)) {
-        friendPairs.add(pairKey);
-        // Tạo friendship với status accepted
-        await Friend.create({
-          requester: msg.senderId,
-          recipient: msg.receiverId,
-          status: "accepted",
-        });
-      }
-    }
-    console.log(`✅ Đã tạo ${friendPairs.size} friendships từ tin nhắn\n`);
-
-    // ============ NGUYỄN VĂN AN - SUPER USER ============
-    // An (index 0) sẽ có TẤT CẢ users khác làm bạn bè
-    // và CỰC NHIỀU tin nhắn để test performance
-    console.log("🌟 Tạo super user Nguyễn Văn An với nhiều bạn bè và tin nhắn...");
-    
-    const anUser = createdUsers[0];
-    let anFriendsCount = 0;
-    let anMessagesCount = 0;
-    
-    // Tin nhắn mẫu cho An
-    const anMessages = [
-      "Chào bạn! Mình là An 👋",
-      "Hôm nay bạn thế nào?",
-      "Cuối tuần này có rảnh không?",
-      "Mình vừa xem phim mới, hay lắm!",
-      "Bạn đã ăn cơm chưa?",
-      "Thời tiết hôm nay đẹp quá",
-      "Mình đang học lập trình, khó quá 😅",
-      "Có gì vui kể mình nghe đi",
-      "Haha, vui ghê 😂",
-      "Ok, hẹn gặp lại nhé!",
-      "Cảm ơn bạn nhiều",
-      "Mình sẽ cố gắng hơn",
-      "Dạo này bận quá, ít online",
-      "Nhớ giữ gìn sức khỏe nhé",
-      "Chúc bạn ngủ ngon 🌙",
-      "Sáng rồi, dậy đi bạn ơi ☀️",
-      "Có tin gì hot không?",
-      "Mình vừa đi cafe về",
-      "Ăn gì chưa, đói bụng quá",
-      "Weekend rồi, đi chơi thôi!",
-    ];
-    
-    const replyMessages = [
-      "Chào An! Mình khỏe, còn bạn?",
-      "Mình cũng đang học, khó thiệt",
-      "Ok, cuối tuần gặp nhé!",
-      "Phim gì vậy, hay không?",
-      "Mình vừa ăn xong rồi",
-      "Ừ, đẹp quá trời luôn",
-      "Cố lên bạn, sẽ làm được thôi 💪",
-      "Haha, mình cũng vui lắm",
-      "Bye bye, hẹn gặp lại!",
-      "Không có chi, bạn hiền ơi",
-      "Mình tin bạn mà",
-      "Mình cũng vậy, bận muốn xỉu",
-      "Bạn cũng vậy nhé",
-      "Good night! 🌟",
-      "Dậy rồi nè, sáng quá!",
-      "Không có gì đặc biệt",
-      "Cafe ở đâu vậy?",
-      "Đói thì ăn đi 😋",
-      "Đi đâu chơi vậy?",
-      "Mình cũng muốn đi!",
-    ];
-    
-    // Tạo bạn bè và tin nhắn cho An với TẤT CẢ users khác
-    for (let i = 1; i < createdUsers.length; i++) {
-      const friend = createdUsers[i];
-      const anId = anUser._id.toString();
-      const friendId = friend._id.toString();
-      const pairKey = anId < friendId ? `${anId}-${friendId}` : `${friendId}-${anId}`;
-      
-      // Tạo friendship nếu chưa có
-      if (!friendPairs.has(pairKey)) {
-        friendPairs.add(pairKey);
-        await Friend.create({
-          requester: anUser._id,
-          recipient: friend._id,
-          status: "accepted",
-        });
-        anFriendsCount++;
-      }
-      
-      // Tạo NHIỀU tin nhắn với mỗi bạn bè (30-100 tin nhắn mỗi người)
-      const numMessages = 30 + Math.floor(Math.random() * 70); // 30-100 messages
-      let msgTime = new Date(baseTime);
-      
-      for (let j = 0; j < numMessages; j++) {
-        msgTime = new Date(msgTime.getTime() + Math.random() * 1800000); // Random 0-30 phút
-        
-        // Xen kẽ tin nhắn từ An và bạn
-        const isAnSending = j % 2 === 0;
-        const msgText = isAnSending 
-          ? anMessages[j % anMessages.length]
-          : replyMessages[j % replyMessages.length];
-        
-        await Message.create({
-          senderId: isAnSending ? anUser._id : friend._id,
-          receiverId: isAnSending ? friend._id : anUser._id,
-          messageType: "direct",
-          text: msgText,
-          isRead: j < numMessages - 5, // 5 tin cuối chưa đọc
-          createdAt: msgTime,
-          updatedAt: msgTime,
-        });
-        anMessagesCount++;
-      }
-    }
-    
-    console.log(`   ✅ Nguyễn Văn An: ${anFriendsCount} bạn bè mới`);
-    console.log(`   ✅ Nguyễn Văn An: ${anMessagesCount} tin nhắn`);
-    console.log("");
-
-    // Tạo thêm bạn bè ngẫu nhiên cho các users khác
-    console.log("👫 Tạo thêm bạn bè ngẫu nhiên cho users khác...");
-    let randomFriendsCount = 0;
-    const targetFriendsPerUser = 5;
-    const maxAttempts = createdUsers.length * targetFriendsPerUser * 2;
-    
-    for (let attempt = 0; attempt < maxAttempts && randomFriendsCount < createdUsers.length * targetFriendsPerUser; attempt++) {
-      const user1Index = Math.floor(Math.random() * createdUsers.length);
-      const user2Index = Math.floor(Math.random() * createdUsers.length);
-      
-      if (user1Index !== user2Index) {
-        const user1Id = createdUsers[user1Index]._id.toString();
-        const user2Id = createdUsers[user2Index]._id.toString();
-        const pairKey = user1Id < user2Id 
-          ? `${user1Id}-${user2Id}` 
-          : `${user2Id}-${user1Id}`;
-        
-        if (!friendPairs.has(pairKey)) {
-          friendPairs.add(pairKey);
-          await Friend.create({
-            requester: createdUsers[user1Index]._id,
-            recipient: createdUsers[user2Index]._id,
-            status: "accepted",
-          });
-          randomFriendsCount++;
-        }
-      }
-    }
-    console.log(`✅ Đã tạo thêm ${randomFriendsCount} friendships ngẫu nhiên\n`);
-
     // Tạo groups
     console.log("👥 Tạo groups...");
     for (const groupData of sampleGroups) {
       const creator = createdUsers[groupData.creatorIndex];
-      
-      // Tạo members array với format đúng: [{ userId, role }]
-      // Đảm bảo creator có trong members với role admin
-      const members = [];
-      for (const i of groupData.memberIndices) {
-        members.push({
-          userId: createdUsers[i]._id,
-          role: i === groupData.creatorIndex ? "admin" : "member",
-          joinedAt: new Date(),
-        });
-      }
+      const members = groupData.memberIndices.map(i => createdUsers[i]._id);
 
-      // Tạo group bằng new Group() và save() để tránh lỗi validation với nested objects
-      const group = new Group({
+      const group = await Group.create({
         name: groupData.name,
-        description: groupData.description || "",
-        createdBy: creator._id,
+        description: groupData.description,
+        creator: creator._id,
+        admins: [creator._id],
         members: members,
-        avatar: `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(groupData.name)}`,
+        avatar: `https://api.dicebear.com/7.x/shapes/svg?seed=${groupData.name}`,
       });
-      
-      await group.save();
 
       console.log(`   ✅ ${group.name} (${members.length} thành viên)`);
 
-      // Tạo tin nhắn trong group (dùng Message model với groupId)
+      // Tạo tin nhắn trong group
       let groupMsgTime = new Date(baseTime);
-      let lastGroupMessage = null;
       for (const msg of groupData.messages) {
         groupMsgTime = new Date(groupMsgTime.getTime() + Math.random() * 1800000);
-        const groupMessage = await Message.create({
+        const groupMessage = await GroupMessage.create({
           groupId: group._id,
           senderId: createdUsers[msg.senderIndex]._id,
           text: msg.text,
-          messageType: "group",
           createdAt: groupMsgTime,
-          updatedAt: groupMsgTime,
         });
-        
-        lastGroupMessage = groupMessage;
-        // Cập nhật lastMessageAt của group
-        group.lastMessageAt = groupMsgTime;
-      }
-      
-      // Set lastMessage reference nếu có tin nhắn
-      if (lastGroupMessage) {
-        group.lastMessage = lastGroupMessage._id;
+
+        // Cập nhật lastMessage của group
+        group.lastMessage = {
+          text: msg.text,
+          sender: createdUsers[msg.senderIndex]._id,
+          createdAt: groupMsgTime,
+        };
       }
       await group.save();
-      
-      console.log(`   ✅ ${group.name} - ${groupData.messages.length} tin nhắn`);
     }
     console.log(`\n📊 Đã tạo ${sampleGroups.length} groups\n`);
 
-    // Đếm tổng số tin nhắn trong DB
-    const totalMessages = await Message.countDocuments({});
-    const totalFriendships = await Friend.countDocuments({});
-    
     // Tổng kết
     console.log("=" .repeat(50));
     console.log("\n🎉 SEED DATABASE HOÀN TẤT!\n");
@@ -538,13 +353,8 @@ const seedDatabase = async () => {
     console.log("   - Mật khẩu: 123456");
     console.log("\n📊 Tổng kết:");
     console.log(`   - Users: ${createdUsers.length}`);
-    console.log(`   - Messages: ${totalMessages}`);
-    console.log(`   - Friendships: ${totalFriendships}`);
+    console.log(`   - Messages: ${messageCount}`);
     console.log(`   - Groups: ${sampleGroups.length}`);
-    console.log("\n🌟 Nguyễn Văn An (Super User):");
-    console.log(`   - Bạn bè: ${createdUsers.length - 1} (tất cả users)`);
-    console.log(`   - Tin nhắn: ${anMessagesCount}`);
-    console.log(`   - Tin chưa đọc: ~${(createdUsers.length - 1) * 5} tin`);
     console.log("\n");
 
   } catch (error) {

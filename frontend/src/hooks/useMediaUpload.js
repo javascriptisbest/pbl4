@@ -6,10 +6,9 @@
  *
  * Features:
  * - Image: Compress trước khi upload
- * - Video: Validate size và lấy metadata
+ * - Video: Tạo object URL ngay, upload background khi gửi
  * - Audio: Voice recording processing
  * - File: Upload documents/PDFs
- * - Progress tracking
  *
  * Returns:
  * - State: previews, metadata, isUploading, uploadProgress
@@ -21,10 +20,9 @@ import toast from "react-hot-toast";
 import { compressImage, fileToBase64 } from "../lib/imageUtils";
 import { validateVideoSize, getVideoMetadata } from "../lib/videoUtils";
 import { audioToBase64 } from "../lib/voiceUtils";
-import { uploadToCloudinary } from "../lib/cloudinaryUpload";
 
 export const useMediaUpload = () => {
-  // Preview states - Base64 strings để preview trong UI
+  // Preview states - Base64 strings hoặc object URLs để preview trong UI
   const [imagePreview, setImagePreview] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
@@ -35,7 +33,7 @@ export const useMediaUpload = () => {
   const [fileMetadata, setFileMetadata] = useState(null);
   const [audioMetadata, setAudioMetadata] = useState(null);
 
-  // Upload states
+  // Upload states (không dùng nữa cho video nhưng giữ lại cho các loại khác)
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [uploadPercent, setUploadPercent] = useState(0);
@@ -77,11 +75,11 @@ export const useMediaUpload = () => {
   /**
    * Xử lý khi user chọn video file
    *
-   * Flow:
+   * Flow mới:
    * 1. Validate file type và size (100MB limit)
-   * 2. Upload trực tiếp lên Cloudinary (nhanh hơn nhiều!)
-   * 3. Lấy metadata và preview URL
-   * 4. Set preview
+   * 2. Tạo object URL để preview ngay (không đợi upload)
+   * 3. Lưu file object để upload background sau
+   * 4. User có thể gửi ngay, upload chạy background
    */
   const handleVideoSelect = async (file) => {
     if (!file || !file.type.startsWith("video/")) {
@@ -89,7 +87,7 @@ export const useMediaUpload = () => {
       return;
     }
 
-    // Validate size (100MB limit - đảm bảo đủ lớn cho video chất lượng cao)
+    // Validate size (100MB limit)
     const videoValidation = validateVideoSize(file, 100);
     if (!videoValidation.isValid) {
       toast.error(videoValidation.message);
@@ -97,43 +95,22 @@ export const useMediaUpload = () => {
     }
 
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
-    const isLargeFile = file.size > 10 * 1024 * 1024; // > 10MB
-
-    setIsUploading(true);
-    setUploadPercent(0);
-    setUploadProgress(`Đang tải video lên Cloudinary (${fileSizeMB}MB)...`);
 
     try {
-      // Lấy video metadata song song (không block upload)
-      const metadataPromise = getVideoMetadata(file);
+      // Lấy video metadata
+      const metadata = await getVideoMetadata(file);
       
-      // Upload trực tiếp lên Cloudinary với progress tracking
-      // Nhanh hơn nhiều so với base64 vì upload trực tiếp, không qua backend
-      const videoUrl = await uploadToCloudinary(file, "video", (percent) => {
-        setUploadPercent(percent);
-        setUploadProgress(`Đang tải video lên Cloudinary... ${percent}%`);
-      });
+      // Tạo object URL để preview ngay (không đợi upload)
+      const objectUrl = URL.createObjectURL(file);
       
-      // Lấy metadata
-      const metadata = await metadataPromise;
+      // Store file object và object URL để upload sau khi gửi
+      setVideoPreview(objectUrl);
+      setVideoMetadata({ ...metadata, fileObject: file }); // Store file object để upload sau
       
-      // Tạo preview URL từ Cloudinary URL (thêm transformation cho preview)
-      // Cloudinary tự động tạo preview URL
-      const previewUrl = videoUrl.replace(/\/upload\//, '/upload/w_640,h_360,c_fill,f_auto,q_auto/');
-      
-      setVideoPreview(previewUrl);
-      setVideoMetadata(metadata);
-      toast.success(`Video đã tải lên thành công! (${fileSizeMB}MB)`);
+      toast.success(`Video sẵn sàng gửi (${fileSizeMB}MB)`);
     } catch (error) {
-      console.error("Video upload error:", error);
-      const errorMsg = error.message || "Không thể tải video";
-      toast.error(errorMsg.includes("size") 
-        ? "Video quá lớn. Vui lòng chọn video nhỏ hơn 100MB." 
-        : "Không thể tải video. Vui lòng thử lại.");
-    } finally {
-      setIsUploading(false);
-      setUploadProgress("");
-      setUploadPercent(0);
+      console.error("Video processing error:", error);
+      toast.error("Không thể xử lý video. Vui lòng thử lại.");
     }
   };
 
@@ -153,30 +130,24 @@ export const useMediaUpload = () => {
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
     const isLargeFile = file.size > 5 * 1024 * 1024; // > 5MB
 
-    setIsUploading(true);
-    setUploadPercent(0);
-
-    try {
-      // For large files, upload directly to Cloudinary (nhanh hơn)
-      if (isLargeFile) {
-        setUploadProgress(`Đang tải file lên Cloudinary (${fileSizeMB}MB)...`);
-        const fileUrl = await uploadToCloudinary(file, "file", (percent) => {
-          setUploadPercent(percent);
-          setUploadProgress(`Đang tải file lên Cloudinary... ${percent}%`);
-        });
-        
-        setFilePreview(fileUrl);
-        setFileMetadata({
-          name: file.name,
-          size: (file.size / 1024).toFixed(2) + " KB",
-          type: file.type,
-        });
-        toast.success("File đã tải lên thành công!");
-      } else {
-        // For small files, use base64 (không cần upload)
-        setUploadProgress("Đang xử lý file...");
+    if (isLargeFile) {
+      // For large files, create object URL và lưu file object để upload sau
+      const objectUrl = URL.createObjectURL(file);
+      setFilePreview(objectUrl);
+      setFileMetadata({
+        name: file.name,
+        size: (file.size / 1024).toFixed(2) + " KB",
+        type: file.type,
+        fileObject: file, // Store file object để upload sau
+      });
+      toast.success("File sẵn sàng gửi");
+    } else {
+      // For small files, use base64 (không cần upload)
+      setIsUploading(true);
+      setUploadProgress("Đang xử lý file...");
+      
+      try {
         const base64 = await fileToBase64(file);
-        
         setFilePreview(base64);
         setFileMetadata({
           name: file.name,
@@ -184,14 +155,13 @@ export const useMediaUpload = () => {
           type: file.type,
         });
         toast.success("File sẵn sàng gửi");
+      } catch (error) {
+        console.error("File processing error:", error);
+        toast.error("Không thể xử lý file. Vui lòng thử lại.");
+      } finally {
+        setIsUploading(false);
+        setUploadProgress("");
       }
-    } catch (error) {
-      console.error("File processing error:", error);
-      toast.error("Không thể xử lý file. Vui lòng thử lại.");
-    } finally {
-      setIsUploading(false);
-      setUploadProgress("");
-      setUploadPercent(0);
     }
   };
 
@@ -214,6 +184,14 @@ export const useMediaUpload = () => {
   };
 
   const clearAll = () => {
+    // Cleanup object URLs để tránh memory leak
+    if (videoPreview && videoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(videoPreview);
+    }
+    if (filePreview && filePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(filePreview);
+    }
+    
     setImagePreview(null);
     setVideoPreview(null);
     setFilePreview(null);
@@ -228,10 +206,16 @@ export const useMediaUpload = () => {
 
   const removeImage = () => setImagePreview(null);
   const removeVideo = () => {
+    if (videoPreview && videoPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(videoPreview);
+    }
     setVideoPreview(null);
     setVideoMetadata(null);
   };
   const removeFile = () => {
+    if (filePreview && filePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(filePreview);
+    }
     setFilePreview(null);
     setFileMetadata(null);
   };

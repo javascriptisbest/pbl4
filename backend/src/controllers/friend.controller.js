@@ -183,29 +183,17 @@ export const acceptFriendRequest = async (req, res) => {
     await friendship.populate("requester", "fullName profilePic email");
     await friendship.populate("recipient", "fullName profilePic email");
 
-    // Emit WebSocket event để notify cả 2 users real-time
-    const { emitToUser } = await import("../lib/websocketServer.js");
-    const requesterId = friendship.requester._id.toString();
-    const recipientId = friendship.recipient._id.toString();
-    
-    // Notify requester (người gửi request)
-    emitToUser(requesterId, "friendAccepted", {
-      friend: friendship.recipient,
-      friendshipId: friendship._id,
-    });
-    
-    // Notify recipient (người chấp nhận)
-    emitToUser(recipientId, "friendAccepted", {
-      friend: friendship.requester,
-      friendshipId: friendship._id,
-    });
+    // Emit socket event để notify cả 2 users real-time
+    const { emitFriendAccepted } = await import("../lib/socket.js");
+    emitFriendAccepted(
+      friendship.requester._id.toString(),
+      friendship.recipient._id.toString(),
+      friendship
+    );
 
     res.status(200).json({
       message: "Friend request accepted",
       friendship,
-      friend: friendship.requester._id.toString() === userId.toString() 
-        ? friendship.recipient 
-        : friendship.requester,
     });
   } catch (error) {
     console.error("Error in acceptFriendRequest: ", error.message);
@@ -388,10 +376,19 @@ export const searchUsersToAdd = async (req, res) => {
       .sort((a, b) => (a.fullName || "").localeCompare(b.fullName || ""))
       .slice(0, 20);
 
+    console.log(`🔍 Search query: "${query}"`);
+    console.log(`📋 Excluding ${friendIds.length} friends/pending`);
+    console.log(`🔎 Normalized query: "${normalizedQuery}"`);
 
     // Debug: Kiểm tra tổng số users trong database
     const totalUsers = await User.countDocuments({ _id: { $ne: userId } });
+    console.log(`📊 Total users in DB (excluding self): ${totalUsers}`);
+    console.log(`📊 Candidates before filter: ${allCandidates.length}`);
 
+    console.log(`✅ Found ${users.length} users matching "${query}"`);
+    if (users.length > 0) {
+      console.log(`   Sample: ${users[0].fullName} (${users[0].email})`);
+    }
 
     res.status(200).json(users);
   } catch (error) {

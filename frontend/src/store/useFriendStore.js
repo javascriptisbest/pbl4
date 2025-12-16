@@ -65,18 +65,15 @@ export const useFriendStore = create((set, get) => ({
    */
   acceptFriendRequest: async (requestId) => {
     try {
-      const res = await axiosInstance.post(`/friends/accept/${requestId}`);
+      await axiosInstance.post(`/friends/accept/${requestId}`);
       toast.success("Friend request accepted");
-      
       // Refresh friends và pending requests
       get().getFriends();
       get().getPendingRequests();
       
       // Refresh danh sách users trong chat store để bạn mới hiện ngay
-      const { useChatStore } = await import('./useChatStore');
+      const useChatStore = await import('./useChatStore').then(m => m.useChatStore);
       useChatStore.getState().getUsers(true); // forceRefresh = true
-      
-      return res.data;
     } catch (error) {
       toast.error("Failed to accept friend request");
       throw error;
@@ -147,5 +144,4 @@ export const useFriendStore = create((set, get) => ({
     }
   },
 }));
-
 

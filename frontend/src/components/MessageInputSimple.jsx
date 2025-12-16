@@ -6,6 +6,7 @@ import { useMediaUpload } from "../hooks/useMediaUpload";
 import EmojiPicker from "./EmojiPicker";
 import MediaPreview from "./MediaPreview";
 import { VoiceRecorder, formatAudioDuration } from "../lib/voiceUtils";
+import { uploadToCloudinary } from "../lib/cloudinaryUpload";
 
 const MessageInputSimple = ({ onSendMessage }) => {
   const [text, setText] = useState("");
@@ -84,11 +85,79 @@ const MessageInputSimple = ({ onSendMessage }) => {
       return;
     }
 
+    // Check if video/file needs to be uploaded
+    const videoFile = media.videoMetadata?.fileObject;
+    const fileObject = media.fileMetadata?.fileObject;
+    let videoUrl = media.videoPreview;
+    let fileUrl = media.filePreview;
+
+    // Nếu video là object URL (chưa upload), gửi ngay và upload background
+    if (videoFile && media.videoPreview?.startsWith('blob:')) {
+      // Upload background, không block UI
+      uploadToCloudinary(videoFile, "video")
+        .then((uploadedUrl) => {
+          // Update message trong store với Cloudinary URL
+          const { useChatStore } = require("../store/useChatStore");
+          const store = useChatStore.getState();
+          const messages = store.messages;
+          const updatedMessages = messages.map(msg => {
+            if (msg.video === media.videoPreview) {
+              return { ...msg, video: uploadedUrl };
+            }
+            return msg;
+          });
+          store.set({ messages: updatedMessages });
+          
+          // Update cache
+          const { messagesCache, selectedUser } = store;
+          if (selectedUser && messagesCache[selectedUser._id]) {
+            store.set({
+              messagesCache: {
+                ...messagesCache,
+                [selectedUser._id]: {
+                  ...messagesCache[selectedUser._id],
+                  messages: updatedMessages,
+                },
+              },
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Background video upload failed:", error);
+          // Không hiển thị error để không làm phiền user
+        });
+      
+      // Gửi ngay với object URL tạm
+      videoUrl = media.videoPreview;
+    }
+
+    // Tương tự cho file
+    if (fileObject && media.filePreview?.startsWith('blob:')) {
+      uploadToCloudinary(fileObject, "file")
+        .then((uploadedUrl) => {
+          const { useChatStore } = require("../store/useChatStore");
+          const store = useChatStore.getState();
+          const messages = store.messages;
+          const updatedMessages = messages.map(msg => {
+            if (msg.file === media.filePreview) {
+              return { ...msg, file: uploadedUrl };
+            }
+            return msg;
+          });
+          store.set({ messages: updatedMessages });
+        })
+        .catch((error) => {
+          console.error("Background file upload failed:", error);
+        });
+      
+      fileUrl = media.filePreview;
+    }
+
     const messageData = {
       text: trimmedText || undefined,
       image: media.imagePreview || undefined,
-      video: media.videoPreview || undefined,
-      file: media.filePreview || undefined,
+      video: videoUrl || undefined,
+      file: fileUrl || undefined,
       fileName: media.fileMetadata?.name || undefined,
       fileSize: media.fileMetadata?.size || undefined,
       fileType: media.fileMetadata?.type || undefined,
@@ -161,28 +230,6 @@ const MessageInputSimple = ({ onSendMessage }) => {
         </div>
       )}
 
-      {/* Upload Progress */}
-      {media.isUploading && (
-        <div className="mb-3 p-3 bg-base-200 rounded-2xl">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="loading loading-spinner loading-sm text-primary"></span>
-            <span className="text-sm font-medium">{media.uploadProgress}</span>
-          </div>
-          {media.uploadPercent > 0 && (
-            <div className="w-full">
-              <progress 
-                className="progress progress-primary w-full" 
-                value={media.uploadPercent} 
-                max="100"
-              ></progress>
-              <div className="text-xs text-base-content/70 mt-1 text-right">
-                {media.uploadPercent}%
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Voice Recording */}
       {isRecording && (
         <div className="mb-3 flex items-center gap-3 p-3 bg-gradient-to-r from-error/10 to-error/20 rounded-2xl shadow-modern">
@@ -238,7 +285,7 @@ const MessageInputSimple = ({ onSendMessage }) => {
                 backgroundColor: "var(--bg-accent)",
                 color: "var(--accent-primary)",
               }}
-              disabled={media.isUploading || isRecording}
+              disabled={isRecording}
               title="Attach"
             >
               <Paperclip className="w-3 h-3 md:w-4 md:h-4" />
@@ -291,7 +338,6 @@ const MessageInputSimple = ({ onSendMessage }) => {
                 : "var(--bg-accent)",
               color: isRecording ? "#ffffff" : "var(--accent-primary)",
             }}
-            disabled={media.isUploading}
             title="Voice"
           >
             <Mic className="w-3 h-3 md:w-4 md:h-4" />
@@ -317,7 +363,7 @@ const MessageInputSimple = ({ onSendMessage }) => {
               backgroundColor: "var(--bg-secondary)",
               color: "var(--text-primary)",
             }}
-            disabled={media.isUploading || isRecording}
+            disabled={isRecording}
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="sentences"
@@ -328,7 +374,7 @@ const MessageInputSimple = ({ onSendMessage }) => {
         <button
           type="submit"
           disabled={
-            (!text.trim() && !hasMedia) || media.isUploading || isRecording
+            (!text.trim() && !hasMedia) || isRecording
           }
           className="flex-shrink-0 w-8 h-8 md:w-auto md:h-auto min-h-8 md:min-h-12 p-0 md:px-4 transition-all rounded-2xl"
           style={{

@@ -24,9 +24,11 @@ router.post("/upload-signature", protectRoute, async (req, res) => {
       params.timeout = 1200000; // 20 minutes
       // Enable chunk upload for better performance
       params.chunk_size = 10000000; // 10MB chunks
+      // Bỏ async parameter vì Cloudinary không yêu cầu trong signature
     }
 
     // Generate signature using Cloudinary secret
+    // IMPORTANT: All params sent in FormData must be included in signature (trừ file và api_key)
     const paramsString = Object.keys(params)
       .sort()
       .map((key) => `${key}=${params[key]}`)
