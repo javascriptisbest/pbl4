@@ -106,9 +106,13 @@ if (
   });
 
   // ===== BODY PARSER =====
+  // Note: express.json() và express.urlencoded() chỉ parse JSON và URL-encoded data
+  // Multer sẽ handle multipart/form-data, nhưng cần đặt sau CORS
   app.use(express.json({ limit: "150mb" })); // Tăng lên 150MB cho file 100MB (base64 + overhead)
   app.use(express.urlencoded({ limit: "150mb", extended: true }));
   app.use(cookieParser());
+  
+  // ===== CORS - Must be before routes =====
   app.use(
     cors({
       origin: function (origin, callback) {
@@ -162,7 +166,10 @@ if (
         "Origin",
         "X-Requested-With",
         "Accept",
+        "Content-Length",
       ],
+      maxAge: 86400, // 24 hours
+      exposedHeaders: ["Content-Length", "Content-Type"],
     })
   );
 

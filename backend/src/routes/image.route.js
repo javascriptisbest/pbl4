@@ -11,14 +11,47 @@ const upload = multer({
   limits: {
     fileSize: 100 * 1024 * 1024, // 100MB limit
   },
+  // Handle errors
+  onError: (err, next) => {
+    console.error("Multer error:", err);
+    next(err);
+  },
+});
+
+// Handle OPTIONS request for CORS preflight
+router.options("/upload-direct", (req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.sendStatus(200);
 });
 
 // Fast direct file upload endpoint - accepts FormData (much faster than base64)
-router.post("/upload-direct", protectRoute, upload.single("file"), async (req, res) => {
+// Multer error handler
+const uploadSingle = upload.single("file");
+const uploadWithErrorHandling = (req, res, next) => {
+  uploadSingle(req, res, (err) => {
+    if (err) {
+      console.error("Multer upload error:", err);
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ error: "File size too large. Maximum allowed is 100MB." });
+      }
+      return res.status(400).json({ error: `Upload error: ${err.message}` });
+    }
+    next();
+  });
+};
+
+router.post("/upload-direct", protectRoute, uploadWithErrorHandling, async (req, res) => {
   try {
+    // Handle file missing
     if (!req.file) {
+      console.error("Upload error: No file in request");
       return res.status(400).json({ error: "No file provided" });
     }
+
+    console.log(`📤 Upload request: ${req.file.originalname} (${(req.file.size / (1024 * 1024)).toFixed(2)}MB), type: ${req.file.mimetype}`);
 
     const { type = "video" } = req.body; // 'video', 'image', 'file'
 
@@ -35,6 +68,9 @@ router.post("/upload-direct", protectRoute, upload.single("file"), async (req, r
       });
     }
 
+    console.log("📤 Starting Cloudinary upload...");
+    console.time("⏱️ Cloudinary upload time");
+    
     // Convert buffer to base64 for Cloudinary (or use stream if possible)
     const base64File = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
 
@@ -50,6 +86,8 @@ router.post("/upload-direct", protectRoute, upload.single("file"), async (req, r
     }
 
     const uploadResponse = await cloudinary.uploader.upload(base64File, uploadOptions);
+    console.timeEnd("⏱️ Cloudinary upload time");
+    console.log(`✅ Upload successful: ${uploadResponse.secure_url}`);
 
     res.status(200).json({
       fileUrl: uploadResponse.secure_url,
@@ -57,7 +95,20 @@ router.post("/upload-direct", protectRoute, upload.single("file"), async (req, r
       success: true,
     });
   } catch (error) {
-    console.error("Direct upload error:", error);
+    console.error("❌ Direct upload error:", error);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      http_code: error.http_code,
+      stack: error.stack,
+    });
+    
+    // Ensure response hasn't been sent
+    if (res.headersSent) {
+      console.error("Response already sent, cannot send error response");
+      return;
+    }
     
     if (error.message?.includes("Invalid")) {
       res.status(400).json({ error: "Invalid file format" });
@@ -66,7 +117,10 @@ router.post("/upload-direct", protectRoute, upload.single("file"), async (req, r
     } else if (error.message?.includes("timeout") || error.http_code === 504) {
       res.status(408).json({ error: "Upload timeout" });
     } else {
-      res.status(500).json({ error: "Failed to upload file" });
+      res.status(500).json({ 
+        error: "Failed to upload file",
+        message: process.env.NODE_ENV === "development" ? error.message : "Upload failed. Please try again.",
+      });
     }
   }
 });

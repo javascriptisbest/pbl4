@@ -206,6 +206,7 @@ export const useChatStore = create((set, get) => ({
     const toId = (v) => (typeof v === "object" && v?._id ? String(v._id) : String(v));
     const receiverId = toId(selectedUser._id);
 
+    // Optimistic update: Hiển thị message ngay cho sender
     const tempMessage = {
       _id: `temp_${Date.now()}_${Math.random()}`,
       ...messageData,
@@ -213,6 +214,9 @@ export const useChatStore = create((set, get) => ({
       receiverId,
       createdAt: new Date().toISOString(),
       isPending: true,
+      // Thêm placeholder cho video/file đang upload
+      ...(videoFile && { video: "uploading...", videoUploading: true }),
+      ...(fileFile && { file: "uploading...", fileUploading: true }),
     };
 
     set({ messages: [...messages, tempMessage] });
@@ -223,63 +227,100 @@ export const useChatStore = create((set, get) => ({
       
       let finalMessageData = { ...messageData };
       
-      // Upload video/file nếu có file gốc (chưa upload)
+      // Upload video/file trong background (song song nếu có cả 2)
+      const uploadPromises = [];
+      
       if (videoFile) {
         console.log(`📹 Uploading video file: ${videoFile.name} (${(videoFile.size / (1024 * 1024)).toFixed(2)}MB)`);
         console.time("⏱️ Upload video to Cloudinary");
-        toast.loading("Uploading video...", { id: "upload-progress" });
         
         const formData = new FormData();
         formData.append("file", videoFile);
         formData.append("type", "video");
         
         const { axiosFileInstance } = await import("../lib/axios.js");
-        const uploadResponse = await axiosFileInstance.post("/images/upload-direct", formData, {
+        const uploadPromise = axiosFileInstance.post("/images/upload-direct", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              toast.loading(`Uploading video: ${percentCompleted}%`, { id: "upload-progress" });
+              const uploadedMB = (progressEvent.loaded / (1024 * 1024)).toFixed(1);
+              const totalMB = (progressEvent.total / (1024 * 1024)).toFixed(1);
+              
+              // Update temp message với progress
+              const currentMessages = get().messages;
+              const updatedMessages = currentMessages.map(msg => 
+                msg._id === tempMessage._id 
+                  ? { ...msg, video: `uploading... ${percentCompleted}% (${uploadedMB}MB/${totalMB}MB)` }
+                  : msg
+              );
+              set({ messages: updatedMessages });
               
               if (percentCompleted % 25 === 0) {
                 console.log(`📤 Upload progress: ${percentCompleted}%`);
               }
             }
           },
+        }).then(response => {
+          console.timeEnd("⏱️ Upload video to Cloudinary");
+          console.log(`✅ Video uploaded: ${response.data.fileUrl}`);
+          return { type: "video", url: response.data.fileUrl };
         });
         
-        console.timeEnd("⏱️ Upload video to Cloudinary");
-        finalMessageData.video = uploadResponse.data.fileUrl;
-        console.log(`✅ Video uploaded: ${uploadResponse.data.fileUrl}`);
+        uploadPromises.push(uploadPromise);
       }
       
       if (fileFile) {
         console.log(`📎 Uploading file: ${fileFile.name} (${(fileFile.size / (1024 * 1024)).toFixed(2)}MB)`);
         console.time("⏱️ Upload file to Cloudinary");
-        toast.loading("Uploading file...", { id: "upload-progress" });
         
         const formData = new FormData();
         formData.append("file", fileFile);
         formData.append("type", "file");
         
         const { axiosFileInstance } = await import("../lib/axios.js");
-        const uploadResponse = await axiosFileInstance.post("/images/upload-direct", formData, {
+        const uploadPromise = axiosFileInstance.post("/images/upload-direct", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              toast.loading(`Uploading file: ${percentCompleted}%`, { id: "upload-progress" });
+              // Update temp message với progress
+              const currentMessages = get().messages;
+              const updatedMessages = currentMessages.map(msg => 
+                msg._id === tempMessage._id 
+                  ? { ...msg, file: `uploading... ${percentCompleted}%` }
+                  : msg
+              );
+              set({ messages: updatedMessages });
             }
           },
+        }).then(response => {
+          console.timeEnd("⏱️ Upload file to Cloudinary");
+          console.log(`✅ File uploaded: ${response.data.fileUrl}`);
+          return { type: "file", url: response.data.fileUrl };
         });
         
-        console.timeEnd("⏱️ Upload file to Cloudinary");
-        finalMessageData.file = uploadResponse.data.fileUrl;
-        console.log(`✅ File uploaded: ${uploadResponse.data.fileUrl}`);
+        uploadPromises.push(uploadPromise);
+      }
+      
+      // Đợi tất cả uploads hoàn thành
+      if (uploadPromises.length > 0) {
+        toast.loading("Uploading media...", { id: "upload-progress" });
+        const uploadResults = await Promise.all(uploadPromises);
+        
+        uploadResults.forEach(result => {
+          if (result.type === "video") {
+            finalMessageData.video = result.url;
+          } else if (result.type === "file") {
+            finalMessageData.file = result.url;
+          }
+        });
+        
+        toast.dismiss("upload-progress");
       }
       
       // Use axiosFileInstance for video/file uploads (longer timeout - 10 minutes)
@@ -291,14 +332,10 @@ export const useChatStore = create((set, get) => ({
       const res = await client.post(`/messages/send/${receiverId}`, finalMessageData);
       console.timeEnd("⏱️ API request time");
       
-      // Dismiss loading toast if it exists
-      if (messageData.video || messageData.file) {
-        toast.dismiss("upload-progress");
-      }
-      
       console.timeEnd("⏱️ Send message total time");
       console.log(`✅ Message sent successfully! Message ID: ${res.data._id}`);
       
+      // Replace temp message with real message
       const { messagesCache, users } = get();
       const currentMessages = get().messages;
       const newMessages = [...currentMessages.filter(m => m._id !== tempMessage._id), res.data];

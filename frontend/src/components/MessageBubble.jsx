@@ -32,7 +32,7 @@ const MessageBubble = ({ message, isMyMessage, authUser, selectedUser, onImageCl
               <div
                 className={`relative px-4 py-3 rounded-2xl shadow-sm max-w-xs break-words ${
                   isMyMessage ? "rounded-br-md" : "rounded-bl-md border"
-                } ${message.isDeleted ? "opacity-60 italic" : ""}`}
+                } ${message.isDeleted ? "opacity-60 italic" : ""} ${message.isPending ? "opacity-70" : ""}`}
                 style={{
                   background: isMyMessage ? "var(--message-sent)" : "var(--message-received)",
                   color: isMyMessage ? "var(--message-text-sent)" : "var(--message-text-received)",
@@ -40,6 +40,11 @@ const MessageBubble = ({ message, isMyMessage, authUser, selectedUser, onImageCl
                 }}
               >
                 <p className="text-sm leading-relaxed">{message.text}</p>
+                {message.isPending && (
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3">
+                    <span className="loading loading-spinner loading-xs text-gray-400"></span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -72,10 +77,20 @@ const MessageBubble = ({ message, isMyMessage, authUser, selectedUser, onImageCl
           )}
 
           {message.video && (
-            <div className={`${message.text || message.image ? "mt-1" : ""} rounded-lg overflow-hidden shadow-sm`}>
-              <video src={message.video} controls className="max-w-[400px] rounded-lg" style={{ maxHeight: "300px" }}>
-                Trình duyệt không hỗ trợ video
-              </video>
+            <div className={`${message.text || message.image ? "mt-1" : ""} rounded-lg overflow-hidden shadow-sm relative`}>
+              {message.video === "uploading..." || message.video?.includes("uploading...") ? (
+                <div className="max-w-[400px] h-[300px] bg-gray-100 rounded-lg flex items-center justify-center flex-col gap-2">
+                  <span className="loading loading-spinner loading-lg text-blue-500"></span>
+                  <p className="text-sm text-gray-600">Uploading video...</p>
+                  {message.video?.includes("%") && (
+                    <p className="text-xs text-gray-500">{message.video}</p>
+                  )}
+                </div>
+              ) : (
+                <video src={message.video} controls className="max-w-[400px] rounded-lg" style={{ maxHeight: "300px" }}>
+                  Trình duyệt không hỗ trợ video
+                </video>
+              )}
             </div>
           )}
 
@@ -93,14 +108,26 @@ const MessageBubble = ({ message, isMyMessage, authUser, selectedUser, onImageCl
 
           {message.file && (
             <div className={`${message.text || message.image || message.video || message.audio ? "mt-1" : ""} flex items-center space-x-3 bg-white border border-gray-200 rounded-lg p-3 shadow-sm max-w-[300px]`}>
-              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">📄</div>
+              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                {message.file === "uploading..." || message.file?.includes("uploading...") ? (
+                  <span className="loading loading-spinner loading-sm text-blue-500"></span>
+                ) : (
+                  "📄"
+                )}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{message.fileName || "Tài liệu"}</p>
-                {message.fileSize && <p className="text-xs text-gray-500">{(message.fileSize / 1024 / 1024).toFixed(2)} MB</p>}
+                {message.file === "uploading..." || message.file?.includes("uploading...") ? (
+                  <p className="text-xs text-gray-500">{message.file}</p>
+                ) : message.fileSize ? (
+                  <p className="text-xs text-gray-500">{(message.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                ) : null}
               </div>
-              <button onClick={() => window.open(message.file, "_blank")} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
-                Tải
-              </button>
+              {message.file !== "uploading..." && !message.file?.includes("uploading...") && (
+                <button onClick={() => window.open(message.file, "_blank")} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                  Tải
+                </button>
+              )}
             </div>
           )}
 
