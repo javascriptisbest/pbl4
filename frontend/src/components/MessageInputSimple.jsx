@@ -87,8 +87,9 @@ const MessageInputSimple = ({ onSendMessage }) => {
     const messageData = {
       text: trimmedText || undefined,
       image: media.imagePreview || undefined,
-      video: media.videoPreview || undefined,
-      file: media.filePreview || undefined,
+      // Video/file sẽ được upload khi send, không gửi preview URL
+      video: media.videoFile ? "pending" : undefined, // Placeholder để biết có video
+      file: media.fileFile ? "pending" : undefined, // Placeholder để biết có file
       fileName: media.fileMetadata?.name || undefined,
       fileSize: media.fileMetadata?.size || undefined,
       fileType: media.fileMetadata?.type || undefined,
@@ -98,6 +99,8 @@ const MessageInputSimple = ({ onSendMessage }) => {
 
     // Clear form
     setText("");
+    const videoFileToUpload = media.videoFile;
+    const fileFileToUpload = media.fileFile;
     media.clearAll();
     [imageInputRef, videoInputRef, fileInputRef].forEach((ref) => {
       if (ref.current) ref.current.value = "";
@@ -105,9 +108,9 @@ const MessageInputSimple = ({ onSendMessage }) => {
 
     try {
       if (onSendMessage) {
-        await onSendMessage(messageData);
+        await onSendMessage(messageData, videoFileToUpload, fileFileToUpload);
       } else {
-        await sendMessage(messageData);
+        await sendMessage(messageData, videoFileToUpload, fileFileToUpload);
       }
     } catch (error) {
       // Error is already handled in sendMessage, but log it here for debugging

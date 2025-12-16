@@ -189,7 +189,7 @@ export const useChatStore = create((set, get) => ({
       set({ isMessagesLoading: false });
     }
   },
-  sendMessage: async (messageData) => {
+  sendMessage: async (messageData, videoFile = null, fileFile = null) => {
     const { selectedUser, messages } = get();
     const authUser = useAuthStore.getState().authUser;
 
@@ -221,21 +221,74 @@ export const useChatStore = create((set, get) => ({
       console.log(`💬 Sending message to user: ${receiverId}`);
       console.time("⏱️ Send message total time");
       
+      let finalMessageData = { ...messageData };
+      
+      // Upload video/file nếu có file gốc (chưa upload)
+      if (videoFile) {
+        console.log(`📹 Uploading video file: ${videoFile.name} (${(videoFile.size / (1024 * 1024)).toFixed(2)}MB)`);
+        console.time("⏱️ Upload video to Cloudinary");
+        toast.loading("Uploading video...", { id: "upload-progress" });
+        
+        const formData = new FormData();
+        formData.append("file", videoFile);
+        formData.append("type", "video");
+        
+        const { axiosFileInstance } = await import("../lib/axios.js");
+        const uploadResponse = await axiosFileInstance.post("/images/upload-direct", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              toast.loading(`Uploading video: ${percentCompleted}%`, { id: "upload-progress" });
+              
+              if (percentCompleted % 25 === 0) {
+                console.log(`📤 Upload progress: ${percentCompleted}%`);
+              }
+            }
+          },
+        });
+        
+        console.timeEnd("⏱️ Upload video to Cloudinary");
+        finalMessageData.video = uploadResponse.data.fileUrl;
+        console.log(`✅ Video uploaded: ${uploadResponse.data.fileUrl}`);
+      }
+      
+      if (fileFile) {
+        console.log(`📎 Uploading file: ${fileFile.name} (${(fileFile.size / (1024 * 1024)).toFixed(2)}MB)`);
+        console.time("⏱️ Upload file to Cloudinary");
+        toast.loading("Uploading file...", { id: "upload-progress" });
+        
+        const formData = new FormData();
+        formData.append("file", fileFile);
+        formData.append("type", "file");
+        
+        const { axiosFileInstance } = await import("../lib/axios.js");
+        const uploadResponse = await axiosFileInstance.post("/images/upload-direct", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              toast.loading(`Uploading file: ${percentCompleted}%`, { id: "upload-progress" });
+            }
+          },
+        });
+        
+        console.timeEnd("⏱️ Upload file to Cloudinary");
+        finalMessageData.file = uploadResponse.data.fileUrl;
+        console.log(`✅ File uploaded: ${uploadResponse.data.fileUrl}`);
+      }
+      
       // Use axiosFileInstance for video/file uploads (longer timeout - 10 minutes)
-      const client = messageData.video || messageData.file 
+      const client = finalMessageData.video || finalMessageData.file 
         ? axiosFileInstance 
         : axiosInstance;
       
-      // Show upload progress for large files
-      if (messageData.video || messageData.file) {
-        toast.loading(messageData.video 
-          ? "Uploading video... This may take a while for large files." 
-          : "Uploading file...", 
-        { id: "upload-progress" });
-      }
-      
       console.time("⏱️ API request time");
-      const res = await client.post(`/messages/send/${receiverId}`, messageData);
+      const res = await client.post(`/messages/send/${receiverId}`, finalMessageData);
       console.timeEnd("⏱️ API request time");
       
       // Dismiss loading toast if it exists

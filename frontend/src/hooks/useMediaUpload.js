@@ -29,6 +29,10 @@ export const useMediaUpload = () => {
   const [filePreview, setFilePreview] = useState(null);
   const [audioPreview, setAudioPreview] = useState(null);
 
+  // Store original files for video/file (for direct upload when sending)
+  const [videoFile, setVideoFile] = useState(null);
+  const [fileFile, setFileFile] = useState(null);
+
   // Metadata states - Thông tin về file (size, duration, etc.)
   const [videoMetadata, setVideoMetadata] = useState(null);
   const [fileMetadata, setFileMetadata] = useState(null);
@@ -99,60 +103,31 @@ export const useMediaUpload = () => {
     setUploadProgress("Processing video...");
 
     try {
-      console.log(`📹 Starting video upload: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
-      console.time("⏱️ Video upload total time");
+      console.log(`📹 Video selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
       
-      // Lấy video metadata (duration, dimensions, etc.)
+      // Lấy video metadata (duration, dimensions, etc.) - không upload ngay
       console.time("⏱️ Get video metadata");
       setUploadProgress("Getting video info...");
       const metadata = await getVideoMetadata(file);
       console.timeEnd("⏱️ Get video metadata");
       
-      // Upload trực tiếp lên Cloudinary với FormData (nhanh hơn base64 rất nhiều!)
-      setUploadProgress(`Uploading video to server... (${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
+      // Tạo preview thumbnail từ video (chỉ để hiển thị trong UI)
+      const previewUrl = URL.createObjectURL(file);
+      setVideoPreview(previewUrl);
       
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("type", "video");
-      
-      const { axiosFileInstance } = await import("../lib/axios.js");
-      console.time("⏱️ Upload to Cloudinary");
-      const response = await axiosFileInstance.post("/images/upload-direct", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(`Uploading: ${percentCompleted}% (${(progressEvent.loaded / (1024 * 1024)).toFixed(1)}MB / ${(progressEvent.total / (1024 * 1024)).toFixed(1)}MB)`);
-            
-            // Log progress every 25%
-            if (percentCompleted % 25 === 0) {
-              console.log(`📤 Upload progress: ${percentCompleted}%`);
-            }
-          }
-        },
-      });
-      console.timeEnd("⏱️ Upload to Cloudinary");
-      
-      // Store Cloudinary URL instead of base64 (much smaller!)
-      setVideoPreview(response.data.fileUrl);
+      // Lưu file để upload khi gửi message
+      setVideoFile(file);
       setVideoMetadata(metadata);
       
-      console.timeEnd("⏱️ Video upload total time");
-      console.log(`✅ Video uploaded successfully! URL: ${response.data.fileUrl}`);
-      
-      toast.success("Video uploaded successfully!");
+      console.log(`✅ Video ready to send (will upload when sending message)`);
+      toast.success("Video ready to send");
     } catch (error) {
-      console.timeEnd("⏱️ Video upload total time");
       console.error("❌ Video processing error:", error);
       
       if (error.message?.includes("memory") || error.message?.includes("too large")) {
         toast.error("Video file is too large to process. Please use a smaller video file.");
-      } else if (error.response?.status === 413) {
-        toast.error(error.response?.data?.error || "File size too large. Maximum allowed is 100MB.");
       } else {
-        toast.error(`Failed to upload video: ${error.response?.data?.error || error.message || "Unknown error"}`);
+        toast.error(`Failed to process video: ${error.message || "Unknown error"}`);
       }
     } finally {
       setIsUploading(false);
@@ -177,55 +152,30 @@ export const useMediaUpload = () => {
     setUploadProgress("Uploading file...");
 
     try {
-      console.log(`📎 Starting file upload: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
-      console.time("⏱️ File upload total time");
+      console.log(`📎 File selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
       
-      // Upload trực tiếp lên Cloudinary với FormData (nhanh hơn base64)
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("type", "file");
-      
-      const { axiosFileInstance } = await import("../lib/axios.js");
-      console.time("⏱️ Upload to Cloudinary");
-      const response = await axiosFileInstance.post("/images/upload-direct", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(`Uploading: ${percentCompleted}%`);
-            
-            // Log progress every 25%
-            if (percentCompleted % 25 === 0) {
-              console.log(`📤 Upload progress: ${percentCompleted}%`);
-            }
-          }
-        },
-      });
-      console.timeEnd("⏱️ Upload to Cloudinary");
-      
-      // Store Cloudinary URL instead of base64
-      setFilePreview(response.data.fileUrl);
+      // Lưu file để upload khi gửi message (không upload ngay)
+      setFileFile(file);
       setFileMetadata({
         name: file.name,
         size: (file.size / 1024).toFixed(2) + " KB",
         type: file.type,
       });
       
-      console.timeEnd("⏱️ File upload total time");
-      console.log(`✅ File uploaded successfully! URL: ${response.data.fileUrl}`);
-      
-      toast.success("File uploaded successfully!");
-    } catch (error) {
-      console.timeEnd("⏱️ File upload total time");
-      console.error("❌ File processing error:", error);
-      
-      if (error.response?.status === 413) {
-        toast.error(error.response?.data?.error || "File size too large. Maximum allowed is 50MB.");
+      // Tạo preview (nếu là image/pdf có thể preview)
+      if (file.type.startsWith("image/")) {
+        const previewUrl = URL.createObjectURL(file);
+        setFilePreview(previewUrl);
       } else {
-        toast.error(`Failed to upload file: ${error.response?.data?.error || error.message || "Unknown error"}`);
+        // Chỉ hiển thị file icon cho non-image files
+        setFilePreview("file");
       }
+      
+      console.log(`✅ File ready to send (will upload when sending message)`);
+      toast.success("File ready to send");
+    } catch (error) {
+      console.error("❌ File processing error:", error);
+      toast.error(`Failed to process file: ${error.message || "Unknown error"}`);
     } finally {
       setIsUploading(false);
       setUploadProgress("");
@@ -251,10 +201,20 @@ export const useMediaUpload = () => {
   };
 
   const clearAll = () => {
+    // Cleanup object URLs
+    if (videoPreview && videoPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(videoPreview);
+    }
+    if (filePreview && filePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(filePreview);
+    }
+    
     setImagePreview(null);
     setVideoPreview(null);
     setFilePreview(null);
     setAudioPreview(null);
+    setVideoFile(null);
+    setFileFile(null);
     setVideoMetadata(null);
     setFileMetadata(null);
     setAudioMetadata(null);
@@ -262,11 +222,19 @@ export const useMediaUpload = () => {
 
   const removeImage = () => setImagePreview(null);
   const removeVideo = () => {
+    if (videoPreview && videoPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(videoPreview);
+    }
     setVideoPreview(null);
+    setVideoFile(null);
     setVideoMetadata(null);
   };
   const removeFile = () => {
+    if (filePreview && filePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(filePreview);
+    }
     setFilePreview(null);
+    setFileFile(null);
     setFileMetadata(null);
   };
   const removeAudio = () => {
@@ -279,6 +247,8 @@ export const useMediaUpload = () => {
     videoPreview,
     filePreview,
     audioPreview,
+    videoFile, // Expose video file for upload
+    fileFile, // Expose file file for upload
     videoMetadata,
     fileMetadata,
     audioMetadata,
