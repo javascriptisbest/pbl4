@@ -348,19 +348,30 @@ export const sendMessage = async (req, res) => {
     let imageUrl, videoUrl, audioUrl, fileUrl, mediaType = "text";
 
     try {
+      // Check if video/file is already a Cloudinary URL (from direct upload)
+      // If it's a URL, use it directly instead of uploading again
+      if (video && (video.startsWith("http://") || video.startsWith("https://"))) {
+        videoUrl = video;
+        mediaType = "video";
+      } else if (video) {
+        videoUrl = await uploadMedia(video, "video");
+        mediaType = "video";
+      }
+      
       if (image) {
         imageUrl = await uploadMedia(image, "image");
         mediaType = "image";
-      }
-      if (video) {
-        videoUrl = await uploadMedia(video, "video");
-        mediaType = "video";
       }
       if (audio) {
         audioUrl = await uploadMedia(audio, "audio");
         mediaType = "audio";
       }
-      if (file) {
+      
+      // Check if file is already a Cloudinary URL
+      if (file && (file.startsWith("http://") || file.startsWith("https://"))) {
+        fileUrl = file;
+        mediaType = "file";
+      } else if (file) {
         fileUrl = await uploadMedia(file, "file");
         mediaType = "file";
       }

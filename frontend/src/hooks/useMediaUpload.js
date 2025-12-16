@@ -74,12 +74,13 @@ export const useMediaUpload = () => {
 
   /**
    * Xử lý khi user chọn video file
-   *
+   * 
+   * OPTIMIZED: Upload trực tiếp lên Cloudinary với FormData (nhanh hơn base64 rất nhiều)
    * Flow:
    * 1. Validate file type và size (100MB limit)
    * 2. Lấy metadata (duration, dimensions)
-   * 3. Convert sang base64
-   * 4. Set preview
+   * 3. Upload trực tiếp lên Cloudinary với FormData
+   * 4. Store Cloudinary URL thay vì base64
    */
   const handleVideoSelect = async (file) => {
     if (!file || !file.type.startsWith("video/")) {
@@ -102,19 +103,38 @@ export const useMediaUpload = () => {
       setUploadProgress("Getting video info...");
       const metadata = await getVideoMetadata(file);
       
-      // Convert to base64 - this can take time for large videos
-      setUploadProgress(`Converting video to base64... (${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
-      const base64 = await fileToBase64(file);
+      // Upload trực tiếp lên Cloudinary với FormData (nhanh hơn base64 rất nhiều!)
+      setUploadProgress(`Uploading video to server... (${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
       
-      setVideoPreview(base64);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "video");
+      
+      const { axiosFileInstance } = await import("../lib/axios.js");
+      const response = await axiosFileInstance.post("/images/upload-direct", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(`Uploading: ${percentCompleted}% (${(progressEvent.loaded / (1024 * 1024)).toFixed(1)}MB / ${(progressEvent.total / (1024 * 1024)).toFixed(1)}MB)`);
+          }
+        },
+      });
+      
+      // Store Cloudinary URL instead of base64 (much smaller!)
+      setVideoPreview(response.data.fileUrl);
       setVideoMetadata(metadata);
-      toast.success("Video ready to send");
+      toast.success("Video uploaded successfully!");
     } catch (error) {
       console.error("Video processing error:", error);
       if (error.message?.includes("memory") || error.message?.includes("too large")) {
         toast.error("Video file is too large to process. Please use a smaller video file.");
+      } else if (error.response?.status === 413) {
+        toast.error(error.response?.data?.error || "File size too large. Maximum allowed is 100MB.");
       } else {
-        toast.error(`Failed to process video: ${error.message || "Unknown error"}`);
+        toast.error(`Failed to upload video: ${error.response?.data?.error || error.message || "Unknown error"}`);
       }
     } finally {
       setIsUploading(false);
@@ -136,20 +156,42 @@ export const useMediaUpload = () => {
     }
 
     setIsUploading(true);
-    setUploadProgress("Processing file...");
+    setUploadProgress("Uploading file...");
 
     try {
-      const base64 = await fileToBase64(file);
-      setFilePreview(base64);
+      // Upload trực tiếp lên Cloudinary với FormData (nhanh hơn base64)
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "file");
+      
+      const { axiosFileInstance } = await import("../lib/axios.js");
+      const response = await axiosFileInstance.post("/images/upload-direct", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(`Uploading: ${percentCompleted}%`);
+          }
+        },
+      });
+      
+      // Store Cloudinary URL instead of base64
+      setFilePreview(response.data.fileUrl);
       setFileMetadata({
         name: file.name,
         size: (file.size / 1024).toFixed(2) + " KB",
         type: file.type,
       });
-      toast.success("File ready to send");
+      toast.success("File uploaded successfully!");
     } catch (error) {
       console.error("File processing error:", error);
-      toast.error("Failed to process file");
+      if (error.response?.status === 413) {
+        toast.error(error.response?.data?.error || "File size too large. Maximum allowed is 50MB.");
+      } else {
+        toast.error(`Failed to upload file: ${error.response?.data?.error || error.message || "Unknown error"}`);
+      }
     } finally {
       setIsUploading(false);
       setUploadProgress("");
