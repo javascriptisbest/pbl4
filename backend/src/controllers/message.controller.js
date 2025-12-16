@@ -40,45 +40,84 @@ export const getUsersForSidebar = async (req, res) => {
         : friendship.requester._id;
     });
 
-    // Lấy lastMessage và unreadCount cho mỗi bạn bè
-    const friendsWithMessages = await Promise.all(
-      friendships.map(async (friendship) => {
-        const friend =
-          friendship.requester._id.toString() === loggedInUserId.toString()
-            ? friendship.recipient
-            : friendship.requester;
+    // OPTIMIZATION: Dùng Aggregation để lấy lastMessage và unreadCount trong 1 lần query
+    // Thay vì query trong vòng lặp (N+1 problem)
 
-        const friendId = friend._id;
-
-        // Lấy tin nhắn cuối cùng giữa 2 người
-        const lastMessage = await Message.findOne({
+    // 1. Lấy last message cho tất cả conversations
+    const lastMessages = await Message.aggregate([
+      {
+        $match: {
           $or: [
-            { senderId: loggedInUserId, receiverId: friendId },
-            { senderId: friendId, receiverId: loggedInUserId },
+            { senderId: loggedInUserId, receiverId: { $in: friendIds } },
+            { senderId: { $in: friendIds }, receiverId: loggedInUserId },
           ],
-          isDeleted: { $ne: true }, // Cho phép null/undefined hoặc false
-          messageType: "direct",
-        })
-          .sort({ createdAt: -1 })
-          .select("text image video audio file senderId createdAt isRead")
-          .lean();
-
-        // Đếm số tin nhắn chưa đọc (từ bạn gửi cho mình)
-        const unreadCount = await Message.countDocuments({
-          senderId: friendId,
-          receiverId: loggedInUserId,
-          isRead: { $ne: true }, // Cho phép null/undefined hoặc false
           isDeleted: { $ne: true },
           messageType: "direct",
-        });
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ["$senderId", loggedInUserId] },
+              "$receiverId",
+              "$senderId",
+            ],
+          },
+          lastMessage: { $first: "$$ROOT" },
+        },
+      },
+    ]);
 
-        return {
-          ...friend,
-          lastMessage: lastMessage || null,
-          unreadCount,
-        };
-      })
-    );
+    // Convert array to map for O(1) lookup
+    const lastMessageMap = {};
+    lastMessages.forEach((item) => {
+      lastMessageMap[item._id.toString()] = item.lastMessage;
+    });
+
+    // 2. Lấy unread count cho tất cả senders
+    const unreadCounts = await Message.aggregate([
+      {
+        $match: {
+          senderId: { $in: friendIds },
+          receiverId: loggedInUserId,
+          isRead: { $ne: true },
+          isDeleted: { $ne: true },
+          messageType: "direct",
+        },
+      },
+      {
+        $group: {
+          _id: "$senderId",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Convert array to map
+    const unreadCountMap = {};
+    unreadCounts.forEach((item) => {
+      unreadCountMap[item._id.toString()] = item.count;
+    });
+
+    // 3. Combine data in memory
+    const friendsWithMessages = friendships.map((friendship) => {
+      const friend =
+        friendship.requester._id.toString() === loggedInUserId.toString()
+          ? friendship.recipient
+          : friendship.requester;
+
+      const friendId = friend._id.toString();
+      const lastMessage = lastMessageMap[friendId] || null;
+      const unreadCount = unreadCountMap[friendId] || 0;
+
+      return {
+        ...friend, // friend is already a plain object due to .lean()
+        lastMessage,
+        unreadCount,
+      };
+    });
 
     // Sắp xếp theo thời gian tin nhắn cuối (mới nhất lên đầu)
     friendsWithMessages.sort((a, b) => {

@@ -215,11 +215,7 @@ const Sidebar = () => {
           <input
             type="text"
             placeholder={
-              activeTab === "contacts" 
-                ? "Tìm kiếm..." 
-                : activeTab === "groups"
-                ? "Tìm nhóm..."
-                : "Tìm bạn..."
+              activeTab === "contacts" ? "Tìm kiếm..." : "Tìm nhóm..."
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -267,44 +263,31 @@ const Sidebar = () => {
               <span>{showOnlineOnly ? "Tất cả" : "Online"}</span>
             </button>
           </div>
-        ) : activeTab === "groups" ? (
+        ) : (
           <div className="flex items-center justify-between">
             <div
               className="flex items-center space-x-2 text-sm"
               style={{ color: "var(--text-secondary)" }}
             >
-              <Users 
-                className="w-4 h-4"
-                style={{ color: "var(--accent-primary)" }}
-              />
+              <Users className="w-4 h-4" />
               <span>{safeGroups.length} nhóm</span>
             </div>
 
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:opacity-90"
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
               style={{
-                backgroundColor: "var(--accent-primary)",
-                color: "#ffffff",
+                background: "var(--bg-accent)",
+                color: "var(--accent-primary)",
+                ":hover": {
+                  background: "var(--accent-primary)",
+                  color: "white",
+                },
               }}
             >
               <Plus className="w-3 h-3" />
               <span>Tạo nhóm</span>
             </button>
-          </div>
-        ) : (
-          // Add Friends tab - no controls needed
-          <div className="flex items-center justify-between">
-            <div
-              className="flex items-center space-x-2 text-sm"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              <UserPlus
-                className="w-4 h-4"
-                style={{ color: "var(--accent-primary)" }}
-              />
-              <span>Tìm bạn bè</span>
-            </div>
           </div>
         )}
       </div>
@@ -323,12 +306,12 @@ const Sidebar = () => {
                 {pendingRequests.received.map((request) => (
                   <div
                     key={request._id}
-                    className="flex items-center justify-between p-3 rounded-lg mb-2 transition-colors hover:opacity-90"
+                    className="flex items-center justify-between p-2 rounded-lg mb-2"
                     style={{ backgroundColor: "var(--bg-accent)" }}
                   >
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div className="flex items-center space-x-3 flex-1">
                       <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium flex-shrink-0"
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
                         style={{ backgroundColor: "var(--accent-primary)" }}
                       >
                         {request.profilePic ? (
@@ -338,7 +321,7 @@ const Sidebar = () => {
                             className="w-full h-full rounded-full object-cover"
                           />
                         ) : (
-                          <span className="text-sm font-bold">{request.fullName?.charAt(0)}</span>
+                          <span className="text-xs">{request.fullName?.charAt(0)}</span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -350,26 +333,20 @@ const Sidebar = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-1 flex-shrink-0">
+                    <div className="flex items-center space-x-1">
                       <button
                         onClick={() => acceptFriendRequest(request.requestId)}
-                        className="p-2 rounded-lg transition-all hover:scale-110"
-                        style={{ 
-                          backgroundColor: "#10b981",
-                          color: "#ffffff",
-                        }}
-                        title="Chấp nhận"
+                        className="p-1.5 rounded-full hover:bg-green-100 transition-colors"
+                        style={{ color: "#10b981" }}
+                        title="Accept"
                       >
                         <Check className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => rejectFriendRequest(request.requestId)}
-                        className="p-2 rounded-lg transition-all hover:scale-110"
-                        style={{ 
-                          backgroundColor: "#ef4444",
-                          color: "#ffffff",
-                        }}
-                        title="Từ chối"
+                        className="p-1.5 rounded-full hover:bg-red-100 transition-colors"
+                        style={{ color: "#ef4444" }}
+                        title="Reject"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -397,12 +374,12 @@ const Sidebar = () => {
                 searchResults.map((user) => (
                   <div
                     key={user._id}
-                    className="flex items-center justify-between p-3 rounded-lg mb-2 transition-colors hover:opacity-90"
+                    className="flex items-center justify-between p-2 rounded-lg mb-2 hover:bg-opacity-80 transition-colors"
                     style={{ backgroundColor: "var(--bg-accent)" }}
                   >
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div className="flex items-center space-x-3 flex-1">
                       <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium flex-shrink-0"
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
                         style={{ backgroundColor: "var(--accent-primary)" }}
                       >
                         {user.profilePic ? (
@@ -412,7 +389,7 @@ const Sidebar = () => {
                             className="w-full h-full rounded-full object-cover"
                           />
                         ) : (
-                          <span className="text-sm font-bold">{user.fullName?.charAt(0)}</span>
+                          <span className="text-xs">{user.fullName?.charAt(0)}</span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -426,14 +403,14 @@ const Sidebar = () => {
                     </div>
                     <button
                       onClick={() => sendFriendRequest(user._id)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center space-x-1 flex-shrink-0 hover:scale-105"
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center space-x-1"
                       style={{
                         backgroundColor: "var(--accent-primary)",
                         color: "#ffffff",
                       }}
                     >
                       <UserPlus className="w-3 h-3" />
-                      <span>Thêm</span>
+                      <span>Add</span>
                     </button>
                   </div>
                 ))
@@ -517,7 +494,7 @@ const Sidebar = () => {
               </div>
             )}
           </div>
-        ) : activeTab === "groups" ? (
+        ) : (
           // Groups List
           <div>
             {safeGroups.length === 0 ? (
@@ -526,91 +503,73 @@ const Sidebar = () => {
                 <p className="text-gray-500 text-sm mb-4">Chưa có nhóm nào</p>
                 <button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="px-4 py-2 rounded-lg text-sm transition-colors"
-                  style={{
-                    backgroundColor: "var(--accent-primary)",
-                    color: "#ffffff",
-                  }}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
                 >
                   Tạo nhóm đầu tiên
                 </button>
               </div>
             ) : (
-              safeGroups
-                .filter((group) => {
-                  // Filter groups by search query
-                  if (!searchQuery.trim()) return true;
-                  const queryLower = searchQuery.toLowerCase();
-                  const queryNormalized = normalizeVietnamese(searchQuery);
-                  const nameLower = (group?.name || "").toLowerCase();
-                  const nameNormalized = normalizeVietnamese(group?.name);
-                  return nameLower.includes(queryLower) || nameNormalized.includes(queryNormalized);
-                })
-                .map((group) => (
-                  <button
-                    key={group._id}
-                    onClick={() => {
-                      setSelectedGroup(group);
-                      setSelectedUser(null); // Clear user selection
-                    }}
-                    className="w-full p-2 flex items-center space-x-3 transition-colors duration-200 rounded-lg mx-1 hover:bg-opacity-80"
-                    style={{
-                      backgroundColor:
-                        selectedGroup?._id === group._id
-                          ? "var(--bg-accent)"
-                          : "transparent",
-                    }}
-                  >
-                    <div className="relative">
-                      <div
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium shadow-sm transition-all duration-300"
-                        style={{ backgroundColor: "var(--accent-secondary)" }}
-                      >
-                        {group.avatar ? (
-                          <img
-                            src={group.avatar}
-                            alt={group.name}
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <Users className="w-6 h-6" />
-                        )}
-                      </div>
-                      {/* Hiển thị số thành viên */}
-                      <div 
-                        className="absolute -bottom-1 -right-1 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold border-2 border-white"
-                        style={{ backgroundColor: "var(--accent-primary)" }}
-                      >
-                        {group.members?.length || 0}
-                      </div>
+              safeGroups.map((group) => (
+                <button
+                  key={group._id}
+                  onClick={() => {
+                    setSelectedGroup(group);
+                    setSelectedUser(null); // Clear user selection
+                  }}
+                  className="w-full p-2 flex items-center space-x-3 transition-colors duration-200 rounded-lg mx-1"
+                  style={{
+                    backgroundColor:
+                      selectedGroup?._id === group._id
+                        ? "var(--bg-accent)"
+                        : "transparent",
+                  }}
+                >
+                  <div className="relative">
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-medium shadow-sm transition-all duration-300"
+                      style={{ backgroundColor: "var(--accent-secondary)" }}
+                    >
+                      {group.avatar ? (
+                        <img
+                          src={group.avatar}
+                          alt={group.name}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <Users className="w-6 h-6" />
+                      )}
                     </div>
+                    <div className="absolute -bottom-1 -right-1 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold border-2 border-white">
+                      {group.members?.length || 0}
+                    </div>
+                  </div>
 
-                    <div className="flex-1 text-left">
-                      <h3
-                        className="font-semibold text-sm"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {group.name}
-                      </h3>
-                      <p
-                        className="text-xs mt-1"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {group.lastMessage
-                          ? group.lastMessage.text ||
-                            (group.lastMessage.image && "📸 Ảnh") ||
-                            (group.lastMessage.video && "🎥 Video") ||
-                            (group.lastMessage.audio && "🎵 Ghi âm") ||
-                            (group.lastMessage.file && "📎 Tài liệu") ||
-                            "💬 Tin nhắn"
-                          : "Chưa có tin nhắn"}
-                      </p>
-                    </div>
-                  </button>
-                ))
+                  <div className="flex-1 text-left">
+                    <h3
+                      className="font-semibold text-sm"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {group.name}
+                    </h3>
+                    <p
+                      className="text-xs mt-1"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {group.lastMessage
+                        ? group.lastMessage.text ||
+                          (group.lastMessage.image && "📸 Ảnh") ||
+                          (group.lastMessage.video && "🎥 Video") ||
+                          (group.lastMessage.audio && "🎵 Ghi âm") ||
+                          (group.lastMessage.file && "📎 Tài liệu") ||
+                          "💬 Tin nhắn"
+                        : "Chưa có tin nhắn"}
+                    </p>
+                  </div>
+                </button>
+              ))
             )}
           </div>
-        ) : null}
+        )}
       </div>
 
       <CreateGroupModal

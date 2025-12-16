@@ -37,7 +37,8 @@ export const protectRoute = async (req, res, next) => {
     }
 
     // Tìm user trong database (không lấy password)
-    const user = await User.findById(decoded.userId).select("-password");
+    // Sử dụng .lean() để tăng tốc độ query (trả về plain JS object thay vì Mongoose Document)
+    const user = await User.findById(decoded.userId).select("-password").lean();
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
