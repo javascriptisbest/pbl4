@@ -55,67 +55,67 @@ const HomePage = () => {
     // Setup voice call modal handlers
     const originalOnIncomingCall = voiceCallManager.onIncomingCall;
     const originalOnCallInitiated = voiceCallManager.onCallInitiated;
-    
-    voiceCallManager.onIncomingCall = (callerId, offer) => {
+
+      voiceCallManager.onIncomingCall = (callerId, offer) => {
       if (originalOnIncomingCall) originalOnIncomingCall(callerId, offer);
       
-      setVoiceCallModal({
-        isOpen: true,
-        isIncoming: true,
-        callerName: `User ${callerId.slice(0, 8)}`,
-        offer,
-        voiceCallManager,
-      });
-      toast("📞 Incoming voice call!");
-    };
+        setVoiceCallModal({
+          isOpen: true,
+          isIncoming: true,
+          callerName: `User ${callerId.slice(0, 8)}`,
+          offer,
+          voiceCallManager,
+        });
+        toast("📞 Incoming voice call!");
+      };
 
     voiceCallManager.onCallInitiated = (targetUserId) => {
       if (originalOnCallInitiated) originalOnCallInitiated(targetUserId);
       
-      setVoiceCallModal({
-        isOpen: true,
-        isIncoming: false,
-        callerName: selectedUser?.fullName || "User",
-        offer: null,
-        voiceCallManager,
-      });
-      toast("📞 Calling...");
-    };
+        setVoiceCallModal({
+          isOpen: true,
+          isIncoming: false,
+          callerName: selectedUser?.fullName || "User",
+          offer: null,
+          voiceCallManager,
+        });
+        toast("📞 Calling...");
+      };
 
-    voiceCallManager.onCallDisconnected = () => {
-      setVoiceCallModal({
-        isOpen: false,
-        isIncoming: false,
-        callerName: "",
-        offer: null,
-        voiceCallManager: null,
-      });
-    };
+      voiceCallManager.onCallDisconnected = () => {
+        setVoiceCallModal({
+          isOpen: false,
+          isIncoming: false,
+          callerName: "",
+          offer: null,
+          voiceCallManager: null,
+        });
+      };
 
-    voiceCallManager.onCallRejected = () => {
-      setVoiceCallModal({
-        isOpen: false,
-        isIncoming: false,
-        callerName: "",
-        offer: null,
-        voiceCallManager: null,
-      });
-    };
+      voiceCallManager.onCallRejected = () => {
+        setVoiceCallModal({
+          isOpen: false,
+          isIncoming: false,
+          callerName: "",
+          offer: null,
+          voiceCallManager: null,
+        });
+      };
 
-    voiceCallManager.onCallConnected = () => {
-      toast.success("Call connected");
-    };
+      voiceCallManager.onCallConnected = () => {
+        toast.success("Call connected");
+      };
 
-    voiceCallManager.onCallFailed = (error) => {
-      setVoiceCallModal({
-        isOpen: false,
-        isIncoming: false,
-        callerName: "",
-        offer: null,
-        voiceCallManager: null,
-      });
-      toast.error(`Call failed: ${error}`);
-    };
+      voiceCallManager.onCallFailed = (error) => {
+        setVoiceCallModal({
+          isOpen: false,
+          isIncoming: false,
+          callerName: "",
+          offer: null,
+          voiceCallManager: null,
+        });
+        toast.error(`Call failed: ${error}`);
+      };
 
     // Cleanup
     return () => {
