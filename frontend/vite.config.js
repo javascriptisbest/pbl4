@@ -26,6 +26,7 @@ export default defineConfig({
         assetFileNames: `assets/[name].[hash].[ext]`,
         manualChunks: {
           vendor: ["react", "react-dom"],
+          socket: ["socket.io-client"],
           utils: ["zustand", "react-hot-toast"],
         },
       },
