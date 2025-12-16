@@ -218,6 +218,9 @@ export const useChatStore = create((set, get) => ({
     set({ messages: [...messages, tempMessage] });
 
     try {
+      console.log(`💬 Sending message to user: ${receiverId}`);
+      console.time("⏱️ Send message total time");
+      
       // Use axiosFileInstance for video/file uploads (longer timeout - 10 minutes)
       const client = messageData.video || messageData.file 
         ? axiosFileInstance 
@@ -231,12 +234,17 @@ export const useChatStore = create((set, get) => ({
         { id: "upload-progress" });
       }
       
+      console.time("⏱️ API request time");
       const res = await client.post(`/messages/send/${receiverId}`, messageData);
+      console.timeEnd("⏱️ API request time");
       
       // Dismiss loading toast if it exists
       if (messageData.video || messageData.file) {
         toast.dismiss("upload-progress");
       }
+      
+      console.timeEnd("⏱️ Send message total time");
+      console.log(`✅ Message sent successfully! Message ID: ${res.data._id}`);
       
       const { messagesCache, users } = get();
       const currentMessages = get().messages;
@@ -258,6 +266,9 @@ export const useChatStore = create((set, get) => ({
         messagesCache: { ...messagesCache, [selectedUser._id]: { messages: newMessages, timestamp: Date.now() } },
       });
     } catch (error) {
+      console.timeEnd("⏱️ Send message total time");
+      console.error("❌ Send message error:", error);
+      
       // Dismiss loading toast if it exists
       toast.dismiss("upload-progress");
       
@@ -276,7 +287,6 @@ export const useChatStore = create((set, get) => ({
       }
       
       toast.error(errorMessage);
-      console.error("Send message error:", error);
     }
   },
 
