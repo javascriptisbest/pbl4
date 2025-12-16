@@ -6,7 +6,7 @@ import cloudinary from "./cloudinary.js";
  */
 const FILE_SIZE_LIMITS = {
   image: 10 * 1024 * 1024,      // 10MB original = ~13.3MB base64
-  video: 100 * 1024 * 1024,     // 100MB original = ~133MB base64 (tối đa)
+  video: 100 * 1024 * 1024,     // 100MB original = ~133MB base64
   audio: 50 * 1024 * 1024,      // 50MB original = ~66.5MB base64
   file: 50 * 1024 * 1024,       // 50MB original = ~66.5MB base64
 };

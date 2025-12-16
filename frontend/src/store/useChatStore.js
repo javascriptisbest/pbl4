@@ -221,50 +221,6 @@ export const useChatStore = create((set, get) => ({
       const res = await axiosInstance.post(`/messages/send/${receiverId}`, messageData);
       const { messagesCache, users } = get();
       const currentMessages = get().messages;
-      
-      // Nếu video là blob URL, upload background và update sau
-      if (messageData.video && messageData.video.startsWith('blob:')) {
-        // Import upload function
-        const { uploadToCloudinary } = await import("../lib/cloudinaryUpload");
-        
-        // Get file object từ metadata (nếu có)
-        const videoFile = tempMessage.videoFileObject;
-        
-        if (videoFile) {
-          // Upload background
-          uploadToCloudinary(videoFile, "video")
-            .then((cloudinaryUrl) => {
-              // Update message với Cloudinary URL
-              const updated = currentMessages.map(msg => {
-                if (msg._id === res.data._id && msg.video === messageData.video) {
-                  return { ...msg, video: cloudinaryUrl };
-                }
-                return msg;
-              });
-              
-              // Update cache
-              set({
-                messages: updated,
-                messagesCache: {
-                  ...messagesCache,
-                  [selectedUser._id]: {
-                    messages: updated,
-                    timestamp: Date.now(),
-                  },
-                },
-              });
-              
-              // Update backend với URL mới (optional - có thể bỏ nếu không cần)
-              // axiosInstance.put(`/messages/${res.data._id}`, { video: cloudinaryUrl })
-              //   .catch(err => console.error("Failed to update video URL:", err));
-            })
-            .catch((error) => {
-              console.error("Background video upload failed:", error);
-              // Không hiển thị error để không làm phiền user
-            });
-        }
-      }
-      
       const newMessages = [...currentMessages.filter(m => m._id !== tempMessage._id), res.data];
 
       const updatedUsers = users.map(user => 

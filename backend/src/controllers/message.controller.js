@@ -349,40 +349,19 @@ export const sendMessage = async (req, res) => {
 
     try {
       if (image) {
-        // Check if it's already a URL (from Cloudinary) or base64
-        if (image.startsWith('http')) {
-          imageUrl = image;
-        } else {
-          imageUrl = await uploadMedia(image, "image");
-        }
+        imageUrl = await uploadMedia(image, "image");
         mediaType = "image";
       }
       if (video) {
-        // Check if it's already a Cloudinary URL (http/https)
-        if (video.startsWith('http')) {
-          videoUrl = video; // Đã là Cloudinary URL
-        } else {
-          // Base64 - upload như cũ (fallback)
-          videoUrl = await uploadMedia(video, "video");
-        }
+        videoUrl = await uploadMedia(video, "video");
         mediaType = "video";
       }
       if (audio) {
-        if (audio.startsWith('http')) {
-          audioUrl = audio;
-        } else {
-          audioUrl = await uploadMedia(audio, "audio");
-        }
+        audioUrl = await uploadMedia(audio, "audio");
         mediaType = "audio";
       }
       if (file) {
-        // Check if it's already a Cloudinary URL
-        if (file.startsWith('http')) {
-          fileUrl = file;
-        } else {
-          // Base64 - upload như cũ (fallback)
-          fileUrl = await uploadMedia(file, "file");
-        }
+        fileUrl = await uploadMedia(file, "file");
         mediaType = "file";
       }
     } catch (uploadError) {

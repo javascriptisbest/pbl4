@@ -37,19 +37,8 @@ export const useAuthStore = create((set, get) => ({
 
       set({ authUser: res.data });
       get().connectSocket();
-
-      console.log(`✅ Auth check completed in ${Date.now() - startTime}ms`);
     } catch (error) {
-      console.log("Error in checkAuth:", error);
       set({ authUser: null });
-
-      // Nếu timeout hoặc network error, vẫn cho user vào offline mode
-      if (
-        error.message === "Auth check timeout" ||
-        error.code === "NETWORK_ERROR"
-      ) {
-        console.log("🔄 Running in offline mode");
-      }
     } finally {
       set({ isCheckingAuth: false });
     }
@@ -81,7 +70,6 @@ export const useAuthStore = create((set, get) => ({
       const errorMessage =
         error.response?.data?.message || error.message || "Login failed";
       toast.error(errorMessage);
-      console.error("Login error:", error);
     } finally {
       set({ isLoggingIn: false });
     }
@@ -105,7 +93,6 @@ export const useAuthStore = create((set, get) => ({
       set({ authUser: res.data });
       toast.success("Profile updated successfully");
     } catch (error) {
-      console.log("error in update profile:", error);
       toast.error(error.response.data.message);
     } finally {
       set({ isUpdatingProfile: false });
@@ -116,26 +103,18 @@ export const useAuthStore = create((set, get) => ({
     const { authUser } = get();
     if (!authUser) return;
 
-    // Disconnect existing socket first to prevent conflicts
     const existingSocket = get().socket;
     if (existingSocket) {
-      console.log("🔄 Disconnecting existing socket before reconnecting...");
       existingSocket.removeAllListeners();
       existingSocket.disconnect();
       set({ socket: null });
     }
 
-    // Force clear any cached URLs for fresh detection
     if (typeof window !== "undefined" && window.clearURLCache) {
       window.clearURLCache();
     }
 
     const socketURL = getSocketURL();
-    console.log("🔌 Auth socket connecting to:", socketURL, {
-      location: window?.location?.href,
-      timestamp: Date.now(),
-      version: "auth-v3.0",
-    });
 
     const socket = createWebSocket(socketURL, {
       query: {
@@ -151,33 +130,29 @@ export const useAuthStore = create((set, get) => ({
 
     // Error handling
     socket.on("connect_error", (error) => {
-      console.error("❌ Socket connection error:", error.message);
-    });
-
-    socket.on("reconnect_attempt", (attemptNumber) => {
-      console.log(`🔄 Socket reconnection attempt ${attemptNumber}`);
-    });
-
-    socket.on("reconnect", (attemptNumber) => {
-      console.log(`✅ Socket reconnected after ${attemptNumber} attempts`);
+      const errorMsg = error?.message || error || "Unknown error";
+      console.error("❌ Socket connection error:", errorMsg);
+      // Don't show toast for connection errors during initial connection attempts
+      // Toast will be shown if max reconnect attempts are reached
     });
 
     socket.on("reconnect_failed", () => {
-      console.error("❌ Socket reconnection failed");
+      console.error("❌ Socket reconnection failed - max attempts reached");
+      toast.error("Không thể kết nối với server. Vui lòng tải lại trang.");
     });
 
     socket.on("connect", () => {
-      console.log("✅ Socket connected successfully, ID:", socket.id);
+      console.log("✅ Socket connected successfully");
     });
 
     socket.on("disconnect", (reason) => {
-      console.log("📴 Socket disconnected:", reason);
       if (reason === "io server disconnect") {
         // Server disconnected, try to reconnect
         socket.connect();
       }
     });
 
+    // Connect socket first
     socket.connect();
 
     // instantiate voice call manager and wire incoming call -> open modal
@@ -240,14 +215,12 @@ export const useAuthStore = create((set, get) => ({
       set({ onlineUsers: safeUserIds });
     });
 
-    // Listen for friend accepted event
-    socket.on("friendAccepted", ({ friendship, message }) => {
-      console.log("✅ Friend accepted event received:", friendship);
-      toast.success(message || "Friend request accepted");
+    // Listen for friend accepted event - tự động refresh danh sách bạn bè
+    socket.on("friendAccepted", (data) => {
       
-      // Refresh danh sách users trong chat store
-      import("./useChatStore.js").then((module) => {
-        module.useChatStore.getState().getUsers(true);
+      // Refresh danh sách users trong chat store để bạn mới hiện ngay
+      import("../store/useChatStore.js").then((module) => {
+        module.useChatStore.getState().getUsers(true); // forceRefresh = true
       });
     });
   },

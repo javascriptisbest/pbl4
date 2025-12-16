@@ -1,64 +1,10 @@
 import express from "express";
 import cloudinary from "../lib/cloudinary.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
-import crypto from "crypto";
 
 const router = express.Router();
 
-// Generate upload signature for direct upload from frontend
-// This allows direct upload to Cloudinary without sending file through backend
-router.post("/upload-signature", protectRoute, async (req, res) => {
-  try {
-    const { folder, resource_type = "auto" } = req.body;
-
-    const timestamp = Math.round(new Date().getTime() / 1000);
-    const params = {
-      timestamp,
-      folder: folder || "chat_app_uploads",
-      resource_type,
-    };
-
-    // Optimizations for video uploads
-    if (resource_type === "video") {
-      // Allow larger timeout for videos
-      params.timeout = 1200000; // 20 minutes
-      // Enable chunk upload for better performance
-      params.chunk_size = 10000000; // 10MB chunks
-      // Bỏ async parameter vì Cloudinary không yêu cầu trong signature
-    }
-
-    // Generate signature using Cloudinary secret
-    // IMPORTANT: All params sent in FormData must be included in signature (trừ file và api_key)
-    const paramsString = Object.keys(params)
-      .sort()
-      .map((key) => `${key}=${params[key]}`)
-      .join("&");
-
-    const signature = crypto
-      .createHash("sha1")
-      .update(paramsString + process.env.CLOUDINARY_API_SECRET)
-      .digest("hex");
-
-    res.status(200).json({
-      signature,
-      timestamp,
-      folder: params.folder,
-      resource_type,
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      // Include optimization params for large videos
-      ...(resource_type === "video" && {
-        timeout: params.timeout,
-        chunk_size: params.chunk_size,
-      }),
-    });
-  } catch (error) {
-    console.error("Error generating upload signature:", error);
-    res.status(500).json({ error: "Failed to generate upload signature" });
-  }
-});
-
-// Upload media API - xử lý cả ảnh và video (fallback for small files)
+// Upload media API - xử lý cả ảnh và video
 router.post("/upload", protectRoute, async (req, res) => {
   try {
     const { image, video } = req.body;

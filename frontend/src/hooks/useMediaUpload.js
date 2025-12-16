@@ -6,9 +6,10 @@
  *
  * Features:
  * - Image: Compress trước khi upload
- * - Video: Tạo object URL ngay, upload background khi gửi
+ * - Video: Validate size và lấy metadata
  * - Audio: Voice recording processing
  * - File: Upload documents/PDFs
+ * - Progress tracking
  *
  * Returns:
  * - State: previews, metadata, isUploading, uploadProgress
@@ -22,7 +23,7 @@ import { validateVideoSize, getVideoMetadata } from "../lib/videoUtils";
 import { audioToBase64 } from "../lib/voiceUtils";
 
 export const useMediaUpload = () => {
-  // Preview states - Base64 strings hoặc object URLs để preview trong UI
+  // Preview states - Base64 strings để preview trong UI
   const [imagePreview, setImagePreview] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
@@ -33,10 +34,9 @@ export const useMediaUpload = () => {
   const [fileMetadata, setFileMetadata] = useState(null);
   const [audioMetadata, setAudioMetadata] = useState(null);
 
-  // Upload states (không dùng nữa cho video nhưng giữ lại cho các loại khác)
+  // Upload states
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
-  const [uploadPercent, setUploadPercent] = useState(0);
 
   /**
    * Xử lý khi user chọn image file
@@ -75,11 +75,11 @@ export const useMediaUpload = () => {
   /**
    * Xử lý khi user chọn video file
    *
-   * Flow mới:
+   * Flow:
    * 1. Validate file type và size (100MB limit)
-   * 2. Tạo object URL để preview ngay (không đợi upload)
-   * 3. Lưu file object để upload background sau
-   * 4. User có thể gửi ngay, upload chạy background
+   * 2. Lấy metadata (duration, dimensions)
+   * 3. Convert sang base64
+   * 4. Set preview
    */
   const handleVideoSelect = async (file) => {
     if (!file || !file.type.startsWith("video/")) {
@@ -94,23 +94,22 @@ export const useMediaUpload = () => {
       return;
     }
 
-    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    setIsUploading(true);
+    setUploadProgress("Processing video...");
 
     try {
-      // Lấy video metadata
+      // Lấy video metadata (duration, dimensions, etc.)
       const metadata = await getVideoMetadata(file);
-      
-      // Tạo object URL để preview ngay (không đợi upload)
-      const objectUrl = URL.createObjectURL(file);
-      
-      // Store file object và object URL để upload sau khi gửi
-      setVideoPreview(objectUrl);
-      setVideoMetadata({ ...metadata, fileObject: file }); // Store file object để upload sau
-      
-      toast.success(`Video sẵn sàng gửi (${fileSizeMB}MB)`);
+      const base64 = await fileToBase64(file);
+      setVideoPreview(base64);
+      setVideoMetadata(metadata);
+      toast.success("Video ready to send");
     } catch (error) {
       console.error("Video processing error:", error);
-      toast.error("Không thể xử lý video. Vui lòng thử lại.");
+      toast.error("Failed to process video");
+    } finally {
+      setIsUploading(false);
+      setUploadProgress("");
     }
   };
 
@@ -127,41 +126,24 @@ export const useMediaUpload = () => {
       return;
     }
 
-    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
-    const isLargeFile = file.size > 5 * 1024 * 1024; // > 5MB
+    setIsUploading(true);
+    setUploadProgress("Processing file...");
 
-    if (isLargeFile) {
-      // For large files, create object URL và lưu file object để upload sau
-      const objectUrl = URL.createObjectURL(file);
-      setFilePreview(objectUrl);
+    try {
+      const base64 = await fileToBase64(file);
+      setFilePreview(base64);
       setFileMetadata({
         name: file.name,
         size: (file.size / 1024).toFixed(2) + " KB",
         type: file.type,
-        fileObject: file, // Store file object để upload sau
       });
-      toast.success("File sẵn sàng gửi");
-    } else {
-      // For small files, use base64 (không cần upload)
-      setIsUploading(true);
-      setUploadProgress("Đang xử lý file...");
-      
-      try {
-        const base64 = await fileToBase64(file);
-        setFilePreview(base64);
-        setFileMetadata({
-          name: file.name,
-          size: (file.size / 1024).toFixed(2) + " KB",
-          type: file.type,
-        });
-        toast.success("File sẵn sàng gửi");
-      } catch (error) {
-        console.error("File processing error:", error);
-        toast.error("Không thể xử lý file. Vui lòng thử lại.");
-      } finally {
-        setIsUploading(false);
-        setUploadProgress("");
-      }
+      toast.success("File ready to send");
+    } catch (error) {
+      console.error("File processing error:", error);
+      toast.error("Failed to process file");
+    } finally {
+      setIsUploading(false);
+      setUploadProgress("");
     }
   };
 
@@ -184,14 +166,6 @@ export const useMediaUpload = () => {
   };
 
   const clearAll = () => {
-    // Cleanup object URLs để tránh memory leak
-    if (videoPreview && videoPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(videoPreview);
-    }
-    if (filePreview && filePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(filePreview);
-    }
-    
     setImagePreview(null);
     setVideoPreview(null);
     setFilePreview(null);
@@ -199,23 +173,14 @@ export const useMediaUpload = () => {
     setVideoMetadata(null);
     setFileMetadata(null);
     setAudioMetadata(null);
-    setIsUploading(false);
-    setUploadProgress("");
-    setUploadPercent(0);
   };
 
   const removeImage = () => setImagePreview(null);
   const removeVideo = () => {
-    if (videoPreview && videoPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(videoPreview);
-    }
     setVideoPreview(null);
     setVideoMetadata(null);
   };
   const removeFile = () => {
-    if (filePreview && filePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(filePreview);
-    }
     setFilePreview(null);
     setFileMetadata(null);
   };
@@ -234,7 +199,6 @@ export const useMediaUpload = () => {
     audioMetadata,
     isUploading,
     uploadProgress,
-    uploadPercent,
     handleImageSelect,
     handleVideoSelect,
     handleFileSelect,
