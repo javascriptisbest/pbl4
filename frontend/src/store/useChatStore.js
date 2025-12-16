@@ -8,7 +8,7 @@
 
 import { create } from "zustand";
 import toast from "react-hot-toast";
-import { axiosInstance } from "../lib/axios.js";
+import { axiosInstance, axiosFileInstance } from "../lib/axios.js";
 import { useAuthStore } from "./useAuthStore";
 import { notificationManager } from "../lib/notifications.js";
 
@@ -218,7 +218,26 @@ export const useChatStore = create((set, get) => ({
     set({ messages: [...messages, tempMessage] });
 
     try {
-      const res = await axiosInstance.post(`/messages/send/${receiverId}`, messageData);
+      // Use axiosFileInstance for video/file uploads (longer timeout - 10 minutes)
+      const client = messageData.video || messageData.file 
+        ? axiosFileInstance 
+        : axiosInstance;
+      
+      // Show upload progress for large files
+      if (messageData.video || messageData.file) {
+        toast.loading(messageData.video 
+          ? "Uploading video... This may take a while for large files." 
+          : "Uploading file...", 
+        { id: "upload-progress" });
+      }
+      
+      const res = await client.post(`/messages/send/${receiverId}`, messageData);
+      
+      // Dismiss loading toast if it exists
+      if (messageData.video || messageData.file) {
+        toast.dismiss("upload-progress");
+      }
+      
       const { messagesCache, users } = get();
       const currentMessages = get().messages;
       const newMessages = [...currentMessages.filter(m => m._id !== tempMessage._id), res.data];
@@ -239,9 +258,25 @@ export const useChatStore = create((set, get) => ({
         messagesCache: { ...messagesCache, [selectedUser._id]: { messages: newMessages, timestamp: Date.now() } },
       });
     } catch (error) {
+      // Dismiss loading toast if it exists
+      toast.dismiss("upload-progress");
+      
       set({ messages: get().messages.filter(m => m._id !== tempMessage._id) });
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || "Failed to send message";
+      
+      // Extract error message
+      let errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || "Failed to send message";
+      
+      // Handle specific error cases
+      if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+        errorMessage = "Upload timeout: The file is too large or connection is slow. Please try a smaller file or check your internet connection.";
+      } else if (error.response?.status === 413) {
+        errorMessage = error.response?.data?.error || "File size too large. Please use a smaller file.";
+      } else if (error.response?.status === 408) {
+        errorMessage = error.response?.data?.error || "Upload timeout. Please try again with a smaller file.";
+      }
+      
       toast.error(errorMessage);
+      console.error("Send message error:", error);
     }
   },
 

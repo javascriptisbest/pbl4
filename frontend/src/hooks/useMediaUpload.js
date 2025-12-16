@@ -99,14 +99,23 @@ export const useMediaUpload = () => {
 
     try {
       // Lấy video metadata (duration, dimensions, etc.)
+      setUploadProgress("Getting video info...");
       const metadata = await getVideoMetadata(file);
+      
+      // Convert to base64 - this can take time for large videos
+      setUploadProgress(`Converting video to base64... (${(file.size / (1024 * 1024)).toFixed(1)}MB)`);
       const base64 = await fileToBase64(file);
+      
       setVideoPreview(base64);
       setVideoMetadata(metadata);
       toast.success("Video ready to send");
     } catch (error) {
       console.error("Video processing error:", error);
-      toast.error("Failed to process video");
+      if (error.message?.includes("memory") || error.message?.includes("too large")) {
+        toast.error("Video file is too large to process. Please use a smaller video file.");
+      } else {
+        toast.error(`Failed to process video: ${error.message || "Unknown error"}`);
+      }
     } finally {
       setIsUploading(false);
       setUploadProgress("");
