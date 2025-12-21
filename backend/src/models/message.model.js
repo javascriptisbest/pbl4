@@ -136,6 +136,26 @@ const messageSchema = new mongoose.Schema(
   }
 );
 
+// Custom validation: Ensure either receiverId or groupId is present
+messageSchema.pre('validate', function(next) {
+  if (this.messageType === 'direct' && !this.receiverId) {
+    console.error('❌ Validation failed: receiverId is required for direct messages', {
+      messageType: this.messageType,
+      senderId: this.senderId,
+      receiverId: this.receiverId,
+    });
+    return next(new Error('receiverId is required for direct messages'));
+  }
+  if (this.messageType === 'group' && !this.groupId) {
+    console.error('❌ Validation failed: groupId is required for group messages', {
+      messageType: this.messageType,
+      groupId: this.groupId,
+    });
+    return next(new Error('groupId is required for group messages'));
+  }
+  next();
+});
+
 // ===== DATABASE INDEXES FOR PERFORMANCE =====
 
 // 1. Index cho direct chat queries (getMessages)

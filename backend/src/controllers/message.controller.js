@@ -399,32 +399,48 @@ export const sendMessage = async (req, res) => {
       // Check if video/file is already a Cloudinary URL (from direct upload)
       // If it's a URL, use it directly instead of uploading again
       if (video && (video.startsWith("http://") || video.startsWith("https://"))) {
+        console.log("✅ Video already uploaded to Cloudinary:", video.substring(0, 100));
         videoUrl = video;
         mediaType = "video";
       } else if (video) {
+        console.log("📤 Uploading video as base64...");
         videoUrl = await uploadMedia(video, "video");
         mediaType = "video";
       }
       
-      if (image) {
+      if (image && (image.startsWith("http://") || image.startsWith("https://"))) {
+        console.log("✅ Image already uploaded to Cloudinary:", image.substring(0, 100));
+        imageUrl = image;
+        mediaType = "image";
+      } else if (image) {
+        console.log("📤 Uploading image...");
         imageUrl = await uploadMedia(image, "image");
         mediaType = "image";
       }
-      if (audio) {
+      
+      if (audio && (audio.startsWith("http://") || audio.startsWith("https://"))) {
+        console.log("✅ Audio already uploaded to Cloudinary:", audio.substring(0, 100));
+        audioUrl = audio;
+        mediaType = "audio";
+      } else if (audio) {
+        console.log("📤 Uploading audio...");
         audioUrl = await uploadMedia(audio, "audio");
         mediaType = "audio";
       }
       
       // Check if file is already a Cloudinary URL
       if (file && (file.startsWith("http://") || file.startsWith("https://"))) {
+        console.log("✅ File already uploaded to Cloudinary:", file.substring(0, 100));
         fileUrl = file;
         mediaType = "file";
       } else if (file) {
+        console.log("📤 Uploading file as base64...");
         fileUrl = await uploadMedia(file, "file");
         mediaType = "file";
       }
     } catch (uploadError) {
-      console.error("Upload error:", uploadError);
+      console.error("❌ Upload error:", uploadError);
+      console.error("Upload error stack:", uploadError.stack);
       
       // Handle specific upload errors
       if (uploadError.message?.includes("Invalid")) {
@@ -449,8 +465,8 @@ export const sendMessage = async (req, res) => {
 
 
     const newMessage = new Message({
-      senderId,
-      receiverId,
+      senderId: new mongoose.Types.ObjectId(senderId),
+      receiverId: new mongoose.Types.ObjectId(receiverId),
       text,
       image: imageUrl,
       video: videoUrl,
@@ -505,13 +521,39 @@ export const sendMessage = async (req, res) => {
     }
 
     try {
+      console.log("💾 Saving message to database...", {
+        senderId: senderId.toString(),
+        receiverId: receiverId.toString(),
+        hasText: !!text,
+        hasImage: !!imageUrl,
+        hasVideo: !!videoUrl,
+        hasAudio: !!audioUrl,
+        hasFile: !!fileUrl,
+        mediaType,
+      });
       await newMessage.save();
+      console.log("✅ Message saved successfully, ID:", newMessage._id);
     } catch (saveError) {
-      console.error("Error saving message to database:", saveError);
+      console.error("❌ Error saving message to database:", saveError);
       console.error("Save error details:", {
         name: saveError.name,
         code: saveError.code,
         errors: saveError.errors,
+        message: saveError.message,
+      });
+      console.error("Message data:", {
+        senderId,
+        receiverId,
+        text,
+        imageUrl,
+        videoUrl,
+        audioUrl,
+        fileUrl,
+        fileName,
+        fileSize,
+        fileType,
+        messageType: "direct",
+        mediaType,
       });
       throw new Error(`Failed to save message: ${saveError.message}`);
     }
