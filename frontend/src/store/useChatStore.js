@@ -73,11 +73,12 @@ export const useChatStore = create((set, get) => ({
     const isValidCache = cacheAge < 2 * 60 * 1000;
     
     // ✅ HIỂN THỊ CACHED MESSAGES NGAY LẬP TỨC (instant loading)
-    console.log(`⚡ Loading from cache (${cached.messages.length} messages, age: ${Math.round(cacheAge/1000)}s, level: ${cached.preloadLevel})`);
+    console.log(`⚡ Loading from cache (${cached.messages.length} messages, age: ${Math.round(cacheAge/1000)}s, level: ${cached.preloadLevel}, needsRefresh: ${cached.needsRefresh || false})`);
     set({ messages: [...cached.messages] }); // Spread để force new array reference
     
     // Load background nếu cần refresh (KHÔNG HIỆN LOADING SPINNER)
-    if (!isValidCache || cached.preloadLevel === "preview" || cached.hasMore) {
+    // Luôn refresh nếu: cache cũ, preload level thấp, có thêm messages, hoặc được đánh dấu needsRefresh
+    if (!isValidCache || cached.preloadLevel === "preview" || cached.hasMore || cached.needsRefresh) {
       console.log(`🔄 Refreshing messages in background...`);
       // Gọi getMessages nhưng KHÔNG set isMessagesLoading = true
       const refreshMessages = async () => {
@@ -92,7 +93,7 @@ export const useChatStore = create((set, get) => ({
               messages,
               messagesCache: {
                 ...get().messagesCache,
-                [userId]: { messages, timestamp: Date.now(), hasMore: false, preloadLevel: "full" },
+                [userId]: { messages, timestamp: Date.now(), hasMore: false, preloadLevel: "full", needsRefresh: false },
               },
             });
             console.log(`✅ Background refresh complete (${messages.length} messages)`);
@@ -154,10 +155,18 @@ export const useChatStore = create((set, get) => ({
     try {
       const res = await axiosInstance.get("/messages/users");
       const users = Array.isArray(res.data) ? res.data : [];
+      
+      // ✅ Filter out current user (chính mình) từ danh sách
+      const authUser = useAuthStore.getState().authUser;
+      const filteredUsers = users.filter(user => user._id !== authUser?._id);
+      
+      if (users.length !== filteredUsers.length) {
+        console.warn(`⚠️ Removed ${users.length - filteredUsers.length} self-user from list`);
+      }
 
       set({
-        users,
-        usersCache: users,
+        users: filteredUsers,
+        usersCache: filteredUsers,
         usersCacheTime: now,
       });
 
@@ -425,7 +434,14 @@ export const useChatStore = create((set, get) => ({
       set({
         messages: newMessages,
         users: updatedUsers,
-        messagesCache: { ...messagesCache, [selectedUser._id]: { messages: newMessages, timestamp: Date.now() } },
+        messagesCache: { 
+          ...messagesCache, 
+          [selectedUser._id]: { 
+            messages: newMessages, 
+            timestamp: Date.now(),
+            needsRefresh: false,
+          } 
+        },
       });
     } catch (error) {
       console.timeEnd("⏱️ Send message total time");
@@ -502,7 +518,7 @@ export const useChatStore = create((set, get) => ({
         console.log("📬 Message for different conversation, updating sidebar only");
         
         // Cập nhật users list với unreadCount + 1 và lastMessage mới
-        const { users } = get();
+        const { users, messagesCache } = get();
         const updatedUsers = users.map(user => {
           if (user._id === sId) {
             return {
@@ -521,6 +537,33 @@ export const useChatStore = create((set, get) => ({
           }
           return user;
         });
+        
+        // ✅ QUAN TRỌNG: Update cache messages cho conversation này
+        // Để khi user click vào, tin nhắn mới đã có sẵn
+        const otherUserId = sId === meId ? rId : sId; // ID của người kia
+        const cachedConversation = messagesCache[otherUserId];
+        
+        if (cachedConversation) {
+          const isDuplicate = cachedConversation.messages.some(m => m._id === newMessage._id);
+          
+          if (!isDuplicate) {
+            const updatedCachedMessages = [...cachedConversation.messages, newMessage];
+            set({
+              messagesCache: {
+                ...messagesCache,
+                [otherUserId]: {
+                  ...cachedConversation,
+                  messages: updatedCachedMessages,
+                  timestamp: Date.now(), // Update timestamp
+                  needsRefresh: false, // Đã có tin nhắn mới, không cần refresh thêm
+                },
+              },
+            });
+            console.log(`✅ Updated cache for conversation ${otherUserId}, total: ${updatedCachedMessages.length}`);
+          }
+        } else {
+          console.log(`⚠️ No cache found for conversation ${otherUserId}, will load when user opens it`);
+        }
         
         // Sắp xếp lại: người vừa gửi tin lên đầu
         updatedUsers.sort((a, b) => {
@@ -603,6 +646,7 @@ export const useChatStore = create((set, get) => ({
           [userId]: {
             messages: updatedMessages,
             timestamp: Date.now(),
+            needsRefresh: false, // Đã có tin mới nhất
           },
         },
       });
