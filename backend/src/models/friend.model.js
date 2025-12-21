@@ -30,6 +30,14 @@ const friendSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Validation: Prevent self-friendship
+friendSchema.pre('validate', function(next) {
+  if (this.requester.toString() === this.recipient.toString()) {
+    return next(new Error('Cannot create friendship with yourself'));
+  }
+  next();
+});
+
 // Compound index để đảm bảo unique relationship
 // Một cặp user chỉ có một friend relationship
 friendSchema.index({ requester: 1, recipient: 1 }, { unique: true });

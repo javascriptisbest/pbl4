@@ -375,6 +375,11 @@ export const sendMessage = async (req, res) => {
       return res.status(400).json({ error: "Receiver ID is required" });
     }
 
+    // Prevent sending messages to yourself
+    if (senderId.toString() === receiverId.toString()) {
+      return res.status(400).json({ error: "Cannot send messages to yourself" });
+    }
+
     if (!text && !image && !video && !audio && !file) {
       return res.status(400).json({ error: "Message content is required" });
     }
