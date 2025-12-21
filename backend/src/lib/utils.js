@@ -5,11 +5,15 @@ export const generateToken = (userId, res) => {
     expiresIn: "7d",
   });
 
+  // Cookie settings differ for production vs development
+  const isProduction = process.env.NODE_ENV === "production";
+  
   res.cookie("jwt", token, {
-    maxAge: 7 * 24 * 60 * 60 * 1000, // MS
-    httpOnly: true, // prevent XSS attacks cross-site scripting attacks
-    sameSite: "none", // Allow cross-origin for production
-    secure: true, // Required for SameSite=none
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in MS
+    httpOnly: true, // prevent XSS attacks
+    sameSite: isProduction ? "none" : "lax", // "none" for cross-origin (production), "lax" for local
+    secure: isProduction, // HTTPS required in production, HTTP OK in development
+    // For LAN access, don't set domain (allows any hostname/IP)
   });
 
   return token;

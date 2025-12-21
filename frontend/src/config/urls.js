@@ -34,10 +34,33 @@ export const getBackendURL = () => {
   }
 
   const hostname = window?.location?.hostname || "";
-  const isLocal = hostname === "localhost" || hostname === "127.0.0.1" ||
-    hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("172.");
+  const port = window?.location?.port || "";
   
-  const backendURL = isLocal ? LOCAL_URLS.BACKEND_URL : PRODUCTION_URLS.BACKEND_URL;
+  // Check if we're in production (Vercel, Render, etc.)
+  const isProduction = hostname.includes("vercel.app") || 
+                       hostname.includes("onrender.com") ||
+                       hostname.includes(".app") ||
+                       (!hostname.includes("localhost") && 
+                        !hostname.startsWith("192.168.") && 
+                        !hostname.startsWith("10.") && 
+                        !hostname.startsWith("172."));
+  
+  let backendURL;
+  
+  if (isProduction) {
+    backendURL = PRODUCTION_URLS.BACKEND_URL;
+  } else {
+    // Local development - use same hostname as frontend
+    // If accessing via LAN IP (192.168.x.x), backend should also use that IP
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      backendURL = LOCAL_URLS.BACKEND_URL;
+    } else {
+      // Use the same IP/hostname as frontend (for LAN access)
+      backendURL = `http://${hostname}:5002`;
+    }
+  }
+  
+  console.log(`🔗 Backend URL: ${backendURL} (hostname: ${hostname})`);
   
   urlCache = { timestamp: now, backend: backendURL, socket: null };
   return backendURL;
@@ -51,10 +74,31 @@ export const getSocketURL = () => {
   }
 
   const hostname = window?.location?.hostname || "";
-  const isLocal = hostname === "localhost" || hostname === "127.0.0.1" ||
-    hostname.startsWith("192.168.") || hostname.startsWith("10.") || hostname.startsWith("172.");
   
-  const socketURL = isLocal ? LOCAL_URLS.SOCKET_URL : PRODUCTION_URLS.SOCKET_URL;
+  // Check if we're in production
+  const isProduction = hostname.includes("vercel.app") || 
+                       hostname.includes("onrender.com") ||
+                       hostname.includes(".app") ||
+                       (!hostname.includes("localhost") && 
+                        !hostname.startsWith("192.168.") && 
+                        !hostname.startsWith("10.") && 
+                        !hostname.startsWith("172."));
+  
+  let socketURL;
+  
+  if (isProduction) {
+    socketURL = PRODUCTION_URLS.SOCKET_URL;
+  } else {
+    // Local development - use same hostname as frontend
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      socketURL = LOCAL_URLS.SOCKET_URL;
+    } else {
+      // Use the same IP/hostname as frontend (for LAN access)
+      socketURL = `http://${hostname}:5002`;
+    }
+  }
+  
+  console.log(`🔌 Socket URL: ${socketURL} (hostname: ${hostname})`);
   
   if (!urlCache) {
     urlCache = { timestamp: now, backend: null, socket: socketURL };
