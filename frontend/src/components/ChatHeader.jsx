@@ -37,9 +37,11 @@ const ChatHeader = () => {
       return;
     }
 
-    if (window.voiceCallManager) {
+    const { voiceCallManager } = useAuthStore.getState();
+    
+    if (voiceCallManager) {
       try {
-        window.voiceCallManager.initiateCall(selectedUser._id);
+        voiceCallManager.initiateCall(selectedUser._id);
         toast("Calling " + selectedUser.fullName);
       } catch (error) {
         console.error("Call error:", error);
@@ -47,7 +49,7 @@ const ChatHeader = () => {
       }
     } else {
       console.error("Voice call manager not available");
-      toast.error("Voice calling not available");
+      toast.error("Voice calling not available. Please refresh the page.");
     }
   };
 
