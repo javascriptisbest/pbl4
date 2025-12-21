@@ -12,8 +12,6 @@ const ChatContainer = () => {
     getMessages,
     isMessagesLoading,
     selectedUser,
-    subscribeToMessages,
-    unsubscribeFromMessages,
   } = useChatStore();
 
   const { authUser } = useAuthStore();
@@ -65,15 +63,9 @@ const ChatContainer = () => {
 
   useEffect(() => {
     getMessages(selectedUser._id);
-    subscribeToMessages();
-
-    return () => unsubscribeFromMessages();
-  }, [
-    selectedUser._id,
-    getMessages,
-    subscribeToMessages,
-    unsubscribeFromMessages,
-  ]);
+    // Note: subscribeToMessages is now called globally when socket connects
+    // No need to subscribe/unsubscribe per conversation
+  }, [selectedUser._id, getMessages]);
 
   // Chỉ auto-scroll khi có message mới (length tăng), không scroll khi chỉ update reaction/edit
   useEffect(() => {

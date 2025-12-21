@@ -470,9 +470,17 @@ export const useChatStore = create((set, get) => ({
         typeof v === "object" && v?._id ? String(v._id) : String(v);
 
       const selId = toId(selectedUser?._id);
-      const sId = toId(newMessage.senderId);
+      const sId = toId(newMessage.senderId?._id || newMessage.senderId);
       const rId = toId(newMessage.receiverId);
       const meId = toId(authUser?._id);
+
+      console.log("🔔 New message received:", { 
+        senderId: sId, 
+        receiverId: rId, 
+        myId: meId, 
+        selectedUserId: selId,
+        text: newMessage.text?.substring(0, 30) || "media"
+      });
 
       // Logic filtering "cứng" hơn:
       // 1. Tin nhắn phải liên quan đến user hiện tại (là sender hoặc receiver)
@@ -482,9 +490,16 @@ export const useChatStore = create((set, get) => ({
       const isFromSelectedConversation =
         selectedUser && (sId === selId || rId === selId);
 
-      if (!isMessageForMe) return;
+      console.log("📊 Message check:", { isMessageForMe, isFromSelectedConversation });
 
+      if (!isMessageForMe) {
+        console.log("❌ Message not for me, ignoring");
+        return;
+      }
+
+      // Nếu KHÔNG ĐANG XEM conversation này → Chỉ update sidebar
       if (!selectedUser || !isFromSelectedConversation) {
+        console.log("📬 Message for different conversation, updating sidebar only");
         
         // Cập nhật users list với unreadCount + 1 và lastMessage mới
         const { users } = get();
@@ -561,15 +576,26 @@ export const useChatStore = create((set, get) => ({
         return;
       }
 
+      // ✅ ĐANG XEM conversation này → Update messages trong chat
+      console.log("💬 Message for current conversation, adding to chat");
+      
       // Chống trùng tin (optimistic update vs server echo)
       const currentMessages = get().messages;
-      const { messagesCache } = get();
+      const { messagesCache, users } = get();
       const userId = selectedUser._id;
 
-      const updatedMessages = currentMessages.some(m => m._id === newMessage._id) 
-        ? currentMessages
-        : [...currentMessages, newMessage];
+      const isDuplicate = currentMessages.some(m => m._id === newMessage._id);
+      
+      if (isDuplicate) {
+        console.log("⚠️ Duplicate message detected, skipping");
+        return;
+      }
 
+      const updatedMessages = [...currentMessages, newMessage];
+      
+      console.log("✅ Added new message to chat, total:", updatedMessages.length);
+
+      // Update messages và cache
       set({
         messages: updatedMessages,
         messagesCache: {
@@ -580,6 +606,27 @@ export const useChatStore = create((set, get) => ({
           },
         },
       });
+
+      // Update sidebar lastMessage
+      const updatedUsers = users.map(user => {
+        if (user._id === userId) {
+          return {
+            ...user,
+            lastMessage: {
+              text: newMessage.text,
+              image: newMessage.image,
+              video: newMessage.video,
+              audio: newMessage.audio,
+              file: newMessage.file,
+              senderId: newMessage.senderId,
+              createdAt: newMessage.createdAt,
+            },
+          };
+        }
+        return user;
+      });
+
+      set({ users: updatedUsers });
     });
 
     // Listen for message reactions

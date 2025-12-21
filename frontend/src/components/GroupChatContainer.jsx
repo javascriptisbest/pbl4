@@ -13,8 +13,6 @@ const GroupChatContainer = () => {
     getGroupMessages,
     isGroupMessagesLoading,
     selectedGroup,
-    subscribeToGroupMessages,
-    unsubscribeFromGroupMessages,
   } = useGroupStore();
 
   const { authUser } = useAuthStore();
@@ -65,16 +63,9 @@ const GroupChatContainer = () => {
   useEffect(() => {
     if (selectedGroup?._id) {
       getGroupMessages(selectedGroup._id);
-      subscribeToGroupMessages();
+      // Note: subscribeToGroupMessages is now called globally when socket connects
     }
-
-    return () => unsubscribeFromGroupMessages();
-  }, [
-    selectedGroup?._id,
-    getGroupMessages,
-    subscribeToGroupMessages,
-    unsubscribeFromGroupMessages,
-  ]);
+  }, [selectedGroup?._id, getGroupMessages]);
 
   useEffect(() => {
     if (messagesEndRef.current) {

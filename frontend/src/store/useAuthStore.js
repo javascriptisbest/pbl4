@@ -250,6 +250,19 @@ export const useAuthStore = create((set, get) => ({
         module.useChatStore.getState().getUsers(true);
       });
     });
+
+    // ✅ Subscribe to chat messages immediately when socket connects
+    // This ensures messages are received even when no chat is open
+    import("./useChatStore.js").then((module) => {
+      console.log("📬 Setting up direct message listeners...");
+      module.useChatStore.getState().subscribeToMessages();
+    });
+
+    // ✅ Subscribe to group messages
+    import("./useGroupStore.js").then((module) => {
+      console.log("📬 Setting up group message listeners...");
+      module.useGroupStore.getState().subscribeToGroupMessages();
+    });
   },
   disconnectSocket: () => {
     const s = get().socket;
