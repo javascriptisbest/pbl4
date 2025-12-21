@@ -7,6 +7,7 @@ import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
+import FloatingNotification from "./components/FloatingNotification";
 
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
@@ -70,6 +71,9 @@ const App = () => {
           />
         </Routes>
       </main>
+
+      {/* Floating Notifications */}
+      {authUser && <FloatingNotification />}
 
       <Toaster
         position="top-center"

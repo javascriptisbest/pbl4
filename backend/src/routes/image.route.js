@@ -76,7 +76,8 @@ router.post("/upload-direct", protectRoute, uploadWithErrorHandling, async (req,
 
     const uploadOptions = {
       folder: type === "video" ? "chat_app_videos" : type === "image" ? "chat_app_images" : "chat_app_files",
-      resource_type: type === "video" ? "video" : "auto",
+      // Use raw for generic files to avoid Cloudinary format errors (pdf/doc/zip...)
+      resource_type: type === "video" ? "video" : type === "image" ? "image" : "raw",
       timeout: 600000, // 10 minutes
       chunk_size: 6000000, // 6MB chunks
     };

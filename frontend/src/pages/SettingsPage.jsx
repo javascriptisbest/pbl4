@@ -1,12 +1,14 @@
 import { useThemeStore } from "../store/useThemeStore";
 import { THEMES } from "../constants";
-import { Check, Bell, BellOff } from "lucide-react";
+import { Check, Bell, BellOff, ArrowLeft } from "lucide-react";
 import { notificationManager } from "../lib/notifications.js";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 const SettingsPage = () => {
   const { theme, setTheme } = useThemeStore();
+  const navigate = useNavigate();
   const [notificationEnabled, setNotificationEnabled] = useState(
     Notification.permission === "granted"
   );
@@ -46,16 +48,30 @@ const SettingsPage = () => {
     >
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1
-            className="text-2xl font-bold mb-2"
-            style={{ color: "var(--text-primary)" }}
+        <div className="mb-8 flex items-center gap-3">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm hover:translate-x-[-2px] transition"
+            style={{
+              borderColor: "var(--border-primary)",
+              color: "var(--text-primary)",
+              background: "var(--bg-secondary)",
+            }}
           >
-            Cài đặt
-          </h1>
-          <p style={{ color: "var(--text-secondary)" }}>
-            Tùy chỉnh trải nghiệm của bạn
-          </p>
+            <ArrowLeft className="w-4 h-4" />
+            Quay lại chat
+          </button>
+          <div>
+            <h1
+              className="text-2xl font-bold mb-1"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Cài đặt
+            </h1>
+            <p style={{ color: "var(--text-secondary)" }}>
+              Tùy chỉnh trải nghiệm của bạn
+            </p>
+          </div>
         </div>
 
         {/* Theme Selection */}

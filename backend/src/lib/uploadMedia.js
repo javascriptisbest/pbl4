@@ -54,7 +54,7 @@ export const uploadMedia = async (media, type) => {
     },
     file: {
       folder: "chat_app_files",
-      resource_type: "auto",
+      resource_type: "raw", // Use raw for generic files (pdf/doc/zip) to avoid Cloudinary auto-detect errors
       timeout: 600000, // 10 minutes
       chunk_size: 6000000, // 6MB chunks
     },

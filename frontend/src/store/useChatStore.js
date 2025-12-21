@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { axiosInstance, axiosFileInstance } from "../lib/axios.js";
 import { useAuthStore } from "./useAuthStore";
 import { notificationManager } from "../lib/notifications.js";
+import { showNewMessageNotification } from "../lib/floatingNotifications.js";
 
 export const useChatStore = create((set, get) => ({
   // State
@@ -22,54 +23,112 @@ export const useChatStore = create((set, get) => ({
   usersCache: null, // Cache users data
   usersCacheTime: null, // Thời gian cache
   messagesCache: {}, // Cache messages by userId: { userId: { messages: [], timestamp: number } }
+  
+  // Debug performance
+  _debugPerformance: false, // Set true để enable debugging
+  
+  // Force refresh functions for debugging
+  forceRefreshUsers: () => {
+    const { getUsers } = get();
+    set({ users: [], usersCache: null, usersCacheTime: null });
+    getUsers(true);
+  },
+  
+  forceRefreshMessages: (userId) => {
+    const { getMessages, messagesCache } = get();
+    const newCache = { ...messagesCache };
+    delete newCache[userId];
+    set({ messages: [], messagesCache: newCache });
+    if (userId) getMessages(userId, true);
+  },
 
   // Set selected user with immediate cache check
   setSelectedUser: (user) => {
     const { messagesCache, markAsRead, users, getMessages } = get();
     const userId = user?._id;
 
+    // Update selected user immediately với force re-render
     set({ selectedUser: user });
 
-    if (!userId) return;
+    if (!userId) {
+      set({ messages: [] });
+      return;
+    }
 
-      const cached = messagesCache[userId];
+    // Mark messages as read ngay lập tức (optimistic update)
+    const userInList = users.find(u => u._id === userId);
+    if (userInList?.unreadCount > 0) {
+      markAsRead(userId); // Đã có optimistic update
+    }
+
+    const cached = messagesCache[userId];
     if (!cached) {
+      console.log(`📭 No cache for user ${userId}, loading...`);
       set({ messages: [] });
       getMessages(userId);
-        return;
-      }
+      return;
+    }
 
     const cacheAge = Date.now() - cached.timestamp;
     const isValidCache = cacheAge < 2 * 60 * 1000;
     
-    set({ messages: cached.messages });
+    // ✅ HIỂN THỊ CACHED MESSAGES NGAY LẬP TỨC (instant loading)
+    console.log(`⚡ Loading from cache (${cached.messages.length} messages, age: ${Math.round(cacheAge/1000)}s, level: ${cached.preloadLevel})`);
+    set({ messages: [...cached.messages] }); // Spread để force new array reference
     
+    // Load background nếu cần refresh (KHÔNG HIỆN LOADING SPINNER)
     if (!isValidCache || cached.preloadLevel === "preview" || cached.hasMore) {
-      getMessages(userId, true);
-    }
-
-    // Mark messages as read khi mở conversation
-    const userInList = users.find(u => u._id === userId);
-    if (userInList?.unreadCount > 0) {
-      markAsRead(userId);
+      console.log(`🔄 Refreshing messages in background...`);
+      // Gọi getMessages nhưng KHÔNG set isMessagesLoading = true
+      const refreshMessages = async () => {
+        try {
+          const res = await axiosInstance.get(`/messages/${userId}`);
+          const messages = res.data;
+          const currentSelected = get().selectedUser;
+          
+          // Chỉ update nếu user vẫn đang xem conversation này
+          if (currentSelected?._id === userId) {
+            set({
+              messages,
+              messagesCache: {
+                ...get().messagesCache,
+                [userId]: { messages, timestamp: Date.now(), hasMore: false, preloadLevel: "full" },
+              },
+            });
+            console.log(`✅ Background refresh complete (${messages.length} messages)`);
+          }
+        } catch (error) {
+          console.log(`⚠️ Background refresh failed (using cached messages)`);
+        }
+      };
+      refreshMessages();
     }
   },
   
   // Đánh dấu tin nhắn đã đọc
   markAsRead: async (userId) => {
+    // Optimistic update - cập nhật UI ngay lập tức
+    const { users } = get();
+    const updatedUsers = users.map(user => 
+      user._id === userId 
+        ? { ...user, unreadCount: 0 }
+        : user
+    );
+    set({ users: updatedUsers }); // Force re-render ngay lập tức
+    
     try {
       await axiosInstance.post(`/messages/read/${userId}`);
-      
-      // Cập nhật unreadCount trong users list
-      const { users } = get();
-      const updatedUsers = users.map(user => 
-        user._id === userId 
-          ? { ...user, unreadCount: 0 }
-          : user
-      );
-      set({ users: updatedUsers });
+      // Success - optimistic update đã đúng
     } catch (error) {
       console.error("Error marking messages as read:", error);
+      // Rollback optimistic update nếu có lỗi
+      const originalUsers = get().users.map(user => 
+        user._id === userId 
+          ? { ...user, unreadCount: user.unreadCount || 1 }
+          : user
+      );
+      set({ users: originalUsers });
+      toast.error("Không thể đánh dấu đã đọc");
     }
   },
 
@@ -120,9 +179,17 @@ export const useChatStore = create((set, get) => ({
   },
   
   // Preload messages cho tất cả users (background) - tối ưu: chỉ preload khi cần
-  preloadMessages: async () => {
+  preloadMessages: async (forceRefresh = false) => {
     const { messagesCache } = get();
-    if (Object.keys(messagesCache).length > 0) return;
+    
+    // Cho phép refresh lại sau 5 phút nếu forceRefresh = true
+    if (!forceRefresh && Object.keys(messagesCache).length > 0) {
+      console.log(`✅ Messages already preloaded (${Object.keys(messagesCache).length} conversations)`);
+      return;
+    }
+    
+    console.log(`🚀 Preloading messages for all conversations...`);
+    const startTime = Date.now();
     
     try {
       // Timeout riêng cho preload (ngắn hơn để không block)
@@ -133,6 +200,7 @@ export const useChatStore = create((set, get) => ({
       clearTimeout(timeoutId);
       
       const newCache = {};
+      let totalMessages = 0;
       for (const [userId, data] of Object.entries(res.data || {})) {
         newCache[userId] = {
           messages: data.messages || [],
@@ -140,13 +208,17 @@ export const useChatStore = create((set, get) => ({
           hasMore: data.hasMore || false,
           preloadLevel: data.preloadLevel || "preview",
         };
+        totalMessages += data.messages?.length || 0;
       }
       
       set({ messagesCache: { ...messagesCache, ...newCache } });
+      console.log(`✅ Preloaded ${totalMessages} messages for ${Object.keys(newCache).length} conversations in ${Date.now() - startTime}ms`);
     } catch (error) {
       // Silent fail - không ảnh hưởng UX
-      if (error.name !== "AbortError") {
-        // Chỉ log nếu không phải timeout
+      if (error.name === "AbortError") {
+        console.log(`⚠️ Preload timeout after 15s`);
+      } else {
+        console.log(`⚠️ Preload failed:`, error.message);
       }
     }
   },
@@ -446,9 +518,14 @@ export const useChatStore = create((set, get) => ({
           return timeB - timeA;
         });
         
-        // 🔔 Show notification
+        // 🔔 Show notifications
         const sender = updatedUsers.find(u => u._id === sId);
-        const senderName = sender?.fullName || "Ai đó";
+        const senderData = {
+          fullName: sender?.fullName || "Ai đó",
+          profilePic: sender?.profilePic,
+        };
+        
+        // Desktop notification (browser notification)
         const getMessageText = () => {
           if (newMessage.text) return newMessage.text.length > 50 ? newMessage.text.substring(0, 50) + "..." : newMessage.text;
           if (newMessage.image) return "📷 Đã gửi ảnh";
@@ -460,12 +537,23 @@ export const useChatStore = create((set, get) => ({
         const messageText = getMessageText();
         
         notificationManager.show(
-          senderName,
+          senderData.fullName,
           messageText,
-          sender?.profilePic || "/avatar.png",
+          senderData.profilePic || "/avatar.png",
           () => {
             const { setSelectedUser } = get();
             setSelectedUser(sId);
+          }
+        );
+
+        // Floating notification (in-app notification)
+        showNewMessageNotification(
+          newMessage,
+          senderData,
+          () => {
+            const { setSelectedUser } = get();
+            setSelectedUser(sId);
+            window.focus(); // Focus window when click notification
           }
         );
         
@@ -531,6 +619,30 @@ export const useChatStore = create((set, get) => ({
         ),
       });
     });
+
+    // Listen for user list updates (unread count changes)
+    socket.on("userListUpdate", (updatedUser) => {
+      const { users } = get();
+      const updatedUsers = users.map(user => 
+        user._id === updatedUser._id ? { ...user, ...updatedUser } : user
+      );
+      set({ users: updatedUsers }); // Force re-render
+    });
+
+    // Listen for unread count changes
+    socket.on("unreadCountUpdate", ({ userId, unreadCount }) => {
+      const { users } = get();
+      const updatedUsers = users.map(user => 
+        user._id === userId ? { ...user, unreadCount } : user
+      );
+      set({ users: updatedUsers }); // Force re-render
+    });
+
+    // Listen for messages read confirmation (từ người khác đọc tin mình gửi)
+    socket.on("messagesRead", ({ readerId, count }) => {
+      // Update read status for messages if needed
+      // Có thể update UI để show "Đã xem" status
+    });
   },
 
   unsubscribeFromMessages: () => {
@@ -539,6 +651,9 @@ export const useChatStore = create((set, get) => ({
     socket.off("messageReaction");
     socket.off("messageDeleted");
     socket.off("messageEdited");
+    socket.off("userListUpdate");
+    socket.off("unreadCountUpdate");
+    socket.off("messagesRead");
   },
 
   addReaction: async (messageId, emoji) => {

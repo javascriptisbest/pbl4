@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { useGroupStore } from "../store/useGroupStore";
@@ -82,21 +82,28 @@ const Sidebar = () => {
       .toLowerCase();
   };
 
-  // Lọc users dựa trên online status và search (hỗ trợ tìm không dấu)
-  const filteredUsers = safeUsers.filter((user) => {
-    const queryLower = searchQuery.toLowerCase();
-    const queryNormalized = normalizeVietnamese(searchQuery);
-    const nameLower = (user?.fullName || "").toLowerCase();
-    const nameNormalized = normalizeVietnamese(user?.fullName);
-    
-    // Match nếu tên chứa query (có dấu hoặc không dấu)
-    const matchesSearch =
-      nameLower.includes(queryLower) || nameNormalized.includes(queryNormalized);
-    const matchesOnlineFilter = showOnlineOnly
-      ? safeOnlineUsers.includes(user?._id)
-      : true;
-    return matchesSearch && matchesOnlineFilter;
-  });
+  // Optimize filtering with useMemo để tránh re-calculate mỗi render
+  const filteredUsers = useMemo(() => {
+    return safeUsers.filter((user) => {
+      const queryLower = searchQuery.toLowerCase();
+      const queryNormalized = normalizeVietnamese(searchQuery);
+      const nameLower = (user?.fullName || "").toLowerCase();
+      const nameNormalized = normalizeVietnamese(user?.fullName);
+      
+      // Match nếu tên chứa query (có dấu hoặc không dấu)
+      const matchesSearch =
+        nameLower.includes(queryLower) || nameNormalized.includes(queryNormalized);
+      const matchesOnlineFilter = showOnlineOnly
+        ? safeOnlineUsers.includes(user?._id)
+        : true;
+      return matchesSearch && matchesOnlineFilter;
+    });
+  }, [safeUsers, searchQuery, showOnlineOnly, safeOnlineUsers]);
+
+  // Memoize user click handler để tránh re-render
+  const handleUserClick = useCallback((user) => {
+    setSelectedUser(user);
+  }, [setSelectedUser]);
 
   const showSkeleton = isUsersLoading;
 
@@ -430,7 +437,7 @@ const Sidebar = () => {
               <button
                 key={user._id}
                 onClick={() => {
-                  setSelectedUser(user);
+                  handleUserClick(user);
                   setSelectedGroup(null); // Clear group selection
                 }}
                 className="w-full p-2 flex items-center space-x-3 transition-colors duration-200 rounded-lg mx-1"
@@ -471,14 +478,47 @@ const Sidebar = () => {
                   >
                     {user.fullName}
                   </h3>
-                  <p
-                    className="text-xs mt-1"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    {safeOnlineUsers.includes(user._id)
-                      ? "Đang hoạt động"
-                      : "Không hoạt động"}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p
+                      className="text-xs truncate flex-1"
+                      style={{ 
+                        color: user.unreadCount > 0 ? "var(--text-primary)" : "var(--text-secondary)",
+                        fontWeight: user.unreadCount > 0 ? "600" : "normal"
+                      }}
+                    >
+                      {user.lastMessage ? (
+                        <>
+                          {user.lastMessage.text ? (
+                            user.lastMessage.text.length > 25 
+                              ? `${user.lastMessage.text.substring(0, 25)}...`
+                              : user.lastMessage.text
+                          ) : user.lastMessage.image ? (
+                            "📷 Đã gửi ảnh"
+                          ) : user.lastMessage.video ? (
+                            "🎥 Đã gửi video"  
+                          ) : user.lastMessage.audio ? (
+                            "🎵 Đã gửi ghi âm"
+                          ) : user.lastMessage.file ? (
+                            "📎 Đã gửi tài liệu"
+                          ) : (
+                            "💬 Tin nhắn"
+                          )}
+                        </>
+                      ) : (
+                        safeOnlineUsers.includes(user._id)
+                          ? "• Đang hoạt động"
+                          : "Không hoạt động"
+                      )}
+                    </p>
+                    {user.unreadCount > 0 && (
+                      <div 
+                        className="min-w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                        style={{ background: "var(--accent-primary)" }}
+                      >
+                        {user.unreadCount > 99 ? "99+" : user.unreadCount}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </button>
             ))}
@@ -516,12 +556,15 @@ const Sidebar = () => {
                     setSelectedGroup(group);
                     setSelectedUser(null); // Clear user selection
                   }}
-                  className="w-full p-2 flex items-center space-x-3 transition-colors duration-200 rounded-lg mx-1"
+                  className="w-full p-2 flex items-center space-x-3 transition-colors duration-200 rounded-lg mx-1 relative"
                   style={{
                     backgroundColor:
                       selectedGroup?._id === group._id
                         ? "var(--bg-accent)"
+                        : group.unreadCount > 0
+                        ? "var(--bg-accent-light)"
                         : "transparent",
+                    borderLeft: group.unreadCount > 0 ? "3px solid var(--accent-primary)" : "3px solid transparent",
                   }}
                 >
                   <div className="relative">
@@ -545,22 +588,35 @@ const Sidebar = () => {
                   </div>
 
                   <div className="flex-1 text-left">
-                    <h3
-                      className="font-semibold text-sm"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {group.name}
-                    </h3>
+                    <div className="flex items-center justify-between">
+                      <h3
+                        className="font-semibold text-sm"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {group.name}
+                      </h3>
+                      {group.unreadCount > 0 && (
+                        <div 
+                          className="min-w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ml-2"
+                          style={{ background: "var(--accent-primary)" }}
+                        >
+                          {group.unreadCount > 99 ? "99+" : group.unreadCount}
+                        </div>
+                      )}
+                    </div>
                     <p
-                      className="text-xs mt-1"
-                      style={{ color: "var(--text-secondary)" }}
+                      className="text-xs mt-1 truncate"
+                      style={{ 
+                        color: group.unreadCount > 0 ? "var(--text-primary)" : "var(--text-secondary)",
+                        fontWeight: group.unreadCount > 0 ? "600" : "normal"
+                      }}
                     >
                       {group.lastMessage
                         ? group.lastMessage.text ||
-                          (group.lastMessage.image && "📸 Ảnh") ||
-                          (group.lastMessage.video && "🎥 Video") ||
-                          (group.lastMessage.audio && "🎵 Ghi âm") ||
-                          (group.lastMessage.file && "📎 Tài liệu") ||
+                          (group.lastMessage.image && "📷 Đã gửi ảnh") ||
+                          (group.lastMessage.video && "🎥 Đã gửi video") ||
+                          (group.lastMessage.audio && "🎵 Đã gửi ghi âm") ||
+                          (group.lastMessage.file && "📎 Đã gửi tài liệu") ||
                           "💬 Tin nhắn"
                         : "Chưa có tin nhắn"}
                     </p>
@@ -580,4 +636,4 @@ const Sidebar = () => {
   );
 };
 
-export default Sidebar;
+export default React.memo(Sidebar);

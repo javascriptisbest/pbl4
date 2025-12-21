@@ -285,6 +285,15 @@ export const markMessagesAsRead = async (req, res) => {
       });
     }
 
+    // Emit event để update unread count trong sidebar của người đọc
+    const readerSocketId = getReceiverSocketId(myId);
+    if (readerSocketId) {
+      emitToSocket(readerSocketId, "unreadCountUpdate", {
+        userId: userId,
+        unreadCount: 0,
+      });
+    }
+
     res.status(200).json({
       success: true,
       modifiedCount: result.modifiedCount,

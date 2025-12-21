@@ -2,6 +2,7 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
+import { showGroupMessageNotification } from "../lib/floatingNotifications.js";
 
 export const useGroupStore = create((set, get) => ({
   groups: [],
@@ -174,8 +175,29 @@ export const useGroupStore = create((set, get) => ({
 
     socket.on("newGroupMessage", (message) => {
       const { selectedGroup, groupMessages } = get();
-      if (selectedGroup && selectedGroup._id === message.groupId) {
-        set({ groupMessages: [...groupMessages, message] });
+      const { authUser } = useAuthStore.getState();
+
+      // Don't show notification if this is my own message or if I'm currently in this group
+      const isMyMessage = message.senderId._id === authUser._id;
+      const isCurrentGroup = selectedGroup?._id === message.groupId;
+
+      if (isCurrentGroup) {
+        // Add to current group messages
+        set({ groupMessages: [...get().groupMessages, message] });
+      } else if (!isMyMessage) {
+        // Show floating notification for group messages from other groups
+        const group = get().groups.find(g => g._id === message.groupId);
+        if (group) {
+          showGroupMessageNotification(
+            message,
+            message.senderId,
+            group,
+            () => {
+              get().setSelectedGroup(group);
+              window.focus();
+            }
+          );
+        }
       }
 
       // Update group list

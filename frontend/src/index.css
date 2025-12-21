@@ -32,6 +32,7 @@
     --bg-secondary: #ffffff;
     --bg-tertiary: #fce7f3;
     --bg-accent: #fbcfe8;
+    --bg-accent-light: rgba(251, 207, 232, 0.4); /* For unread messages */
     --text-primary: #1a1a1a;
     --text-secondary: #6b7280;
     --text-muted: #9ca3af;
@@ -58,6 +59,7 @@
     --bg-secondary: #ffffff;
     --bg-tertiary: #dbeafe;
     --bg-accent: #bfdbfe;
+    --bg-accent-light: rgba(191, 219, 254, 0.4); /* For unread messages */
     --text-primary: #1e293b;
     --text-secondary: #475569;
     --text-muted: #64748b;
@@ -82,6 +84,7 @@
     --bg-secondary: #ffffff;
     --bg-tertiary: #fed7aa;
     --bg-accent: #fbbf24;
+    --bg-accent-light: rgba(251, 191, 36, 0.3); /* For unread messages */
     --text-primary: #7c2d12;
     --text-secondary: #ea580c;
     --text-muted: #f97316;
@@ -106,6 +109,7 @@
     --bg-secondary: #1f2937;
     --bg-tertiary: #374151;
     --bg-accent: #4b5563;
+    --bg-accent-light: rgba(75, 85, 99, 0.4); /* For unread messages */
     --text-primary: #f9fafb;
     --text-secondary: #d1d5db;
     --text-muted: #9ca3af;
@@ -132,6 +136,7 @@
     --bg-secondary: #1a1a3e;
     --bg-tertiary: #2d2d5f;
     --bg-accent: #4a4a8a;
+    --bg-accent-light: rgba(74, 74, 138, 0.4); /* For unread messages */
     --text-primary: #ffffff;
     --text-secondary: #f1f5f9;
     --text-muted: #e2e8f0;

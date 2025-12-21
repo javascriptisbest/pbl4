@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { Camera, Mail, User } from "lucide-react";
+import { Camera, Mail, User, ArrowLeft } from "lucide-react";
 import Avatar from "../components/Avatar";
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
   const [selectedImg, setSelectedImg] = useState(null);
+  const navigate = useNavigate();
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -35,16 +37,30 @@ const ProfilePage = () => {
             border: "1px solid var(--border-primary)",
           }}
         >
-          <div className="text-center">
-            <h1
-              className="text-2xl font-semibold"
-              style={{ color: "var(--text-primary)" }}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm hover:translate-x-[-2px] transition"
+              style={{
+                borderColor: "var(--border-primary)",
+                color: "var(--text-primary)",
+                background: "var(--bg-secondary)",
+              }}
             >
-              Profile
-            </h1>
-            <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
-              Your profile information
-            </p>
+              <ArrowLeft className="w-4 h-4" />
+              Quay lại chat
+            </button>
+            <div>
+              <h1
+                className="text-2xl font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                Profile
+              </h1>
+              <p className="mt-1" style={{ color: "var(--text-secondary)" }}>
+                Your profile information
+              </p>
+            </div>
           </div>
 
           {/* avatar upload section */}
