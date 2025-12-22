@@ -21,21 +21,45 @@ export class VoiceCallManager {
     this.isIncoming = false; // Cuộc gọi đến hay gọi đi
     this.callerId = null; // ID người gọi
     this.calleeId = null; // ID người nhận
+    this.pendingIceCandidates = []; // Queue ICE candidates until remote description is set
 
     /**
      * WebRTC Configuration
      * STUN servers: Giúp tìm public IP của client (NAT traversal)
-     * TURN servers: Relay traffic nếu P2P connection fail (không dùng ở đây)
+     * TURN servers: Relay traffic nếu P2P connection fail
      */
     this.config = {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
         { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" },
       ],
+      iceCandidatePoolSize: 10,
     };
 
     this.setupSocketListeners();
+  }
+
+  /**
+   * Process pending ICE candidates after remote description is set
+   */
+  async processPendingIceCandidates() {
+    if (this.pendingIceCandidates.length === 0) return;
+
+    console.log(`📥 Processing ${this.pendingIceCandidates.length} pending ICE candidates`);
+    
+    for (const candidate of this.pendingIceCandidates) {
+      try {
+        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        console.log("✅ Pending ICE candidate added");
+      } catch (error) {
+        console.error("❌ Error adding pending ICE candidate:", error);
+      }
+    }
+    
+    this.pendingIceCandidates = [];
   }
 
   /**
@@ -74,11 +98,18 @@ export class VoiceCallManager {
       console.log("📞 Call answered by:", answererId);
       
       if (this.peerConnection) {
-        // Set remote description = SDP answer từ peer
-        await this.peerConnection.setRemoteDescription(
-          new RTCSessionDescription(answer)
-        );
-        console.log("✅ Remote description (answer) set successfully");
+        try {
+          // Set remote description = SDP answer từ peer
+          await this.peerConnection.setRemoteDescription(
+            new RTCSessionDescription(answer)
+          );
+          console.log("✅ Remote description (answer) set successfully");
+          
+          // Process pending ICE candidates
+          await this.processPendingIceCandidates();
+        } catch (error) {
+          console.error("❌ Error setting remote description:", error);
+        }
       } else {
         console.error("❌ No peer connection when receiving answer");
       }
@@ -93,17 +124,21 @@ export class VoiceCallManager {
       "voice-call-ice-candidate",
       async ({ candidate, senderId }) => {
         console.log("🧊 Received ICE candidate from:", senderId);
-        if (this.peerConnection && candidate) {
-          try {
-            await this.peerConnection.addIceCandidate(
-              new RTCIceCandidate(candidate)
-            );
-            console.log("✅ ICE candidate added successfully");
-          } catch (error) {
-            console.error("❌ Error adding ICE candidate:", error);
-          }
-        } else if (!this.peerConnection) {
-          console.warn("⚠️ Received ICE candidate but no peer connection");
+        
+        if (!candidate) return;
+
+        // Queue ICE candidate if peer connection not ready or remote description not set
+        if (!this.peerConnection || !this.peerConnection.remoteDescription) {
+          console.log("⏳ Queuing ICE candidate (waiting for remote description)");
+          this.pendingIceCandidates.push(candidate);
+          return;
+        }
+
+        try {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log("✅ ICE candidate added successfully");
+        } catch (error) {
+          console.error("❌ Error adding ICE candidate:", error);
         }
       }
     );
@@ -243,6 +278,10 @@ export class VoiceCallManager {
       await this.peerConnection.setRemoteDescription(
         new RTCSessionDescription(offer)
       );
+      console.log("✅ Remote description (offer) set successfully");
+
+      // Process pending ICE candidates
+      await this.processPendingIceCandidates();
 
       // Create answer
       const answer = await this.peerConnection.createAnswer();
@@ -310,6 +349,7 @@ export class VoiceCallManager {
     this.callerId = null;
     this.calleeId = null;
     this.remoteStream = null;
+    this.pendingIceCandidates = [];
 
     if (this.onCallDisconnected) {
       this.onCallDisconnected();

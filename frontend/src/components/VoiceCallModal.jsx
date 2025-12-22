@@ -54,35 +54,46 @@ const VoiceCallModal = ({
     };
 
     voiceCallManager.onRemoteStream = (stream) => {
+      console.log("🔊 Remote stream received in modal");
+      
       if (remoteAudioRef.current) {
+        // Ensure audio element is ready
         remoteAudioRef.current.srcObject = stream;
-        remoteAudioRef.current.volume = 1.0; // Set max volume
-        remoteAudioRef.current.muted = false; // Ensure not muted
+        remoteAudioRef.current.volume = 1.0;
+        remoteAudioRef.current.muted = false;
         
-        // Play with better error handling
-        const playPromise = remoteAudioRef.current.play();
+        // Log stream info
+        const audioTracks = stream.getAudioTracks();
+        console.log(`🎵 Stream has ${audioTracks.length} audio tracks`);
+        audioTracks.forEach((track, i) => {
+          console.log(`  Track ${i}: enabled=${track.enabled}, muted=${track.muted}, readyState=${track.readyState}`);
+          // Ensure track is enabled
+          track.enabled = true;
+        });
         
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log("✅ Remote audio playing successfully");
-            })
-            .catch((error) => {
-              console.error("❌ Error playing remote audio:", error);
-              toast.error("Click anywhere to enable audio playback");
-              
-              // Try to play on user interaction
-              const playOnInteraction = () => {
-                remoteAudioRef.current?.play()
-                  .then(() => {
-                    console.log("✅ Audio playing after user interaction");
-                    document.removeEventListener('click', playOnInteraction);
-                  })
-                  .catch(e => console.error("Still can't play:", e));
-              };
-              document.addEventListener('click', playOnInteraction, { once: true });
-            });
-        }
+        // Play with retry logic
+        const playAudio = async () => {
+          try {
+            await remoteAudioRef.current.play();
+            console.log("✅ Remote audio playing successfully");
+          } catch (error) {
+            console.error("❌ Error playing remote audio:", error);
+            toast.error("Click anywhere to enable audio");
+            
+            // Auto-retry on user interaction
+            const playOnClick = async () => {
+              try {
+                await remoteAudioRef.current?.play();
+                console.log("✅ Audio playing after click");
+              } catch (e) {
+                console.error("Still can't play:", e);
+              }
+            };
+            document.addEventListener('click', playOnClick, { once: true });
+          }
+        };
+        
+        playAudio();
       }
     };
 
@@ -93,6 +104,12 @@ const VoiceCallModal = ({
 
     voiceCallManager.onCallEnded = () => {
       // Call ended - no notification
+      onClose();
+    };
+
+    voiceCallManager.onCallFailed = (error) => {
+      console.error("❌ Call failed:", error);
+      toast.error(`Call failed: ${error}`);
       onClose();
     };
 

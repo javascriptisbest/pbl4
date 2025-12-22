@@ -309,21 +309,29 @@ function handleEvent(ws, socketInfo, event, payload) {
 
     case "voice-call-answer": {
       const { callerId, answer } = payload;
+      console.log(`📞 Voice call answer from ${userId} to ${callerId}`);
+      
       const callerUserInfo = userSocketMap[callerId];
       if (callerUserInfo) {
         const callerSockets = getAllUserSockets(callerId);
+        console.log(`📤 Sending voice-call-answered to ${callerSockets.length} sessions`);
+        
         callerSockets.forEach((callerSocketId) => {
           sendToSocket(callerSocketId, "voice-call-answered", {
             answer: answer,
             answererId: userId,
           });
         });
+      } else {
+        console.log(`❌ Caller ${callerId} not found or offline`);
       }
       break;
     }
 
     case "voice-call-ice-candidate": {
       const { targetUserId, candidate } = payload;
+      console.log(`🧊 ICE candidate from ${userId} to ${targetUserId}`);
+      
       const targetUserInfo = userSocketMap[targetUserId];
       if (targetUserInfo) {
         const targetSockets = getAllUserSockets(targetUserId);
