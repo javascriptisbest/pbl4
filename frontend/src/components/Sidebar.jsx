@@ -232,7 +232,11 @@ const Sidebar = () => {
           <input
             type="text"
             placeholder={
-              activeTab === "contacts" ? "Tìm kiếm..." : "Tìm nhóm..."
+              activeTab === "contacts" 
+                ? "Tìm kiếm..." 
+                : activeTab === "groups" 
+                ? "Tìm nhóm..." 
+                : "Tìm bạn để thêm..."
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -280,7 +284,7 @@ const Sidebar = () => {
               <span>{showOnlineOnly ? "Tất cả" : "Online"}</span>
             </button>
           </div>
-        ) : (
+        ) : activeTab === "groups" ? (
           <div className="flex items-center justify-between">
             <div
               className="flex items-center space-x-2 text-sm"
@@ -305,6 +309,17 @@ const Sidebar = () => {
               <Plus className="w-3 h-3" />
               <span>Tạo nhóm</span>
             </button>
+          </div>
+        ) : (
+          /* addFriends tab - no extra controls needed */
+          <div className="flex items-center justify-between">
+            <div
+              className="flex items-center space-x-2 text-sm"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Tìm bạn bè mới</span>
+            </div>
           </div>
         )}
       </div>
