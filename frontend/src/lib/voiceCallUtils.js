@@ -142,6 +142,16 @@ export class VoiceCallManager {
           sampleRate: 44100,
         },
       });
+      
+      console.log("🎤 Local microphone stream acquired:", 
+        this.localStream.getAudioTracks().length, "audio tracks");
+      this.localStream.getAudioTracks().forEach((track, index) => {
+        console.log(`  Local track ${index}:`, {
+          enabled: track.enabled,
+          muted: track.muted,
+          readyState: track.readyState
+        });
+      });
 
       // Create peer connection
       this.peerConnection = new RTCPeerConnection(this.config);
@@ -197,6 +207,16 @@ export class VoiceCallManager {
           autoGainControl: true,
           sampleRate: 44100,
         },
+      });
+      
+      console.log("🎤 Local microphone stream acquired (answer):", 
+        this.localStream.getAudioTracks().length, "audio tracks");
+      this.localStream.getAudioTracks().forEach((track, index) => {
+        console.log(`  Local track ${index}:`, {
+          enabled: track.enabled,
+          muted: track.muted,
+          readyState: track.readyState
+        });
       });
 
       // Create peer connection
@@ -300,12 +320,26 @@ export class VoiceCallManager {
     };
 
     this.peerConnection.ontrack = (event) => {
+      console.log("🎵 Received remote track:", event.track.kind, event.track.enabled);
       this.remoteStream = event.streams[0];
+      
+      // Log audio tracks info
+      const audioTracks = this.remoteStream.getAudioTracks();
+      console.log("🔊 Remote audio tracks:", audioTracks.length);
+      audioTracks.forEach((track, index) => {
+        console.log(`  Track ${index}:`, {
+          id: track.id,
+          kind: track.kind,
+          enabled: track.enabled,
+          muted: track.muted,
+          readyState: track.readyState
+        });
+      });
 
       if (this.onRemoteStream) {
         this.onRemoteStream(this.remoteStream);
       } else {
-        console.warn("onRemoteStream callback not set");
+        console.warn("⚠️ onRemoteStream callback not set");
       }
     };
 

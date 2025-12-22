@@ -56,10 +56,33 @@ const VoiceCallModal = ({
     voiceCallManager.onRemoteStream = (stream) => {
       if (remoteAudioRef.current) {
         remoteAudioRef.current.srcObject = stream;
-        remoteAudioRef.current.play().catch((error) => {
-          console.error("Error playing remote audio:", error);
-          toast.error("Click anywhere to enable audio");
-        });
+        remoteAudioRef.current.volume = 1.0; // Set max volume
+        remoteAudioRef.current.muted = false; // Ensure not muted
+        
+        // Play with better error handling
+        const playPromise = remoteAudioRef.current.play();
+        
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log("✅ Remote audio playing successfully");
+            })
+            .catch((error) => {
+              console.error("❌ Error playing remote audio:", error);
+              toast.error("Click anywhere to enable audio playback");
+              
+              // Try to play on user interaction
+              const playOnInteraction = () => {
+                remoteAudioRef.current?.play()
+                  .then(() => {
+                    console.log("✅ Audio playing after user interaction");
+                    document.removeEventListener('click', playOnInteraction);
+                  })
+                  .catch(e => console.error("Still can't play:", e));
+              };
+              document.addEventListener('click', playOnInteraction, { once: true });
+            });
+        }
       }
     };
 
@@ -146,7 +169,13 @@ const VoiceCallModal = ({
         style={{ background: "var(--bg-secondary)" }}
       >
         {/* Remote audio element - hidden but functional */}
-        <audio ref={remoteAudioRef} autoPlay style={{ display: "none" }} />
+        <audio 
+          ref={remoteAudioRef} 
+          autoPlay 
+          playsInline
+          muted={false}
+          style={{ display: "none" }} 
+        />
 
         {/* Call Header */}
         <div className="text-center mb-6">
