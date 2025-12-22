@@ -59,6 +59,12 @@ export const useAuthStore = create((set, get) => ({
     set({ isSigningUp: true });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
+      
+      // Lưu token vào localStorage cho cross-origin auth
+      if (res.data.token) {
+        localStorage.setItem('jwt_token', res.data.token);
+      }
+      
       set({ authUser: res.data });
       toast.success("Account created successfully");
       get().connectSocket();
@@ -73,6 +79,12 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoggingIn: true });
     try {
       const res = await axiosInstance.post("/auth/login", data);
+      
+      // Lưu token vào localStorage cho cross-origin auth
+      if (res.data.token) {
+        localStorage.setItem('jwt_token', res.data.token);
+      }
+      
       set({ authUser: res.data });
       toast.success("Logged in successfully");
 
@@ -90,6 +102,10 @@ export const useAuthStore = create((set, get) => ({
   logout: async () => {
     try {
       await axiosInstance.post("/auth/logout");
+      
+      // Xóa token khỏi localStorage
+      localStorage.removeItem('jwt_token');
+      
       set({ authUser: null });
       toast.success("Logged out successfully");
       get().disconnectSocket();

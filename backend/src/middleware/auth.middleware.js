@@ -17,10 +17,17 @@ import User from "../models/user.model.js";
 
 export const protectRoute = async (req, res, next) => {
   try {
-    // Debug: Log all cookies and headers
-
-    // Lấy JWT token từ cookie (HTTP-only cookie cho security)
-    const token = req.cookies.jwt;
+    // Lấy JWT token từ cookie hoặc Authorization header
+    // Ưu tiên header cho cross-origin requests
+    let token = req.cookies.jwt;
+    
+    // Nếu không có cookie, thử lấy từ Authorization header
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7); // Remove "Bearer " prefix
+      }
+    }
 
     if (!token) {
       return res

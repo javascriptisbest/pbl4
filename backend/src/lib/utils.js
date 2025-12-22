@@ -8,6 +8,7 @@ export const generateToken = (userId, res) => {
   // Cookie settings differ for production vs development
   const isProduction = process.env.NODE_ENV === "production";
   
+  // Set cookie (for same-origin requests)
   res.cookie("jwt", token, {
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in MS
     httpOnly: true, // prevent XSS attacks
