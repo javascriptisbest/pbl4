@@ -256,14 +256,44 @@ export const useAuthStore = create((set, get) => ({
       set({ onlineUsers: safeUserIds });
     });
 
-    // Listen for friend accepted event
-    socket.on("friendAccepted", ({ friendship, message }) => {
-      console.log("✅ Friend accepted event received:", friendship);
-      toast.success(message || "Friend request accepted");
+    // Listen for friend-related events
+    socket.on("friend-request-received", ({ from, requestId }) => {
+      console.log("📬 Friend request received from:", from?.fullName);
+      toast.success(`${from?.fullName || "Someone"} sent you a friend request!`);
+      
+      // Refresh pending requests
+      import("./useFriendStore.js").then((module) => {
+        module.useFriendStore.getState().getPendingRequests();
+      });
+    });
+    
+    socket.on("friend-request-accepted", ({ friend, friendshipId }) => {
+      console.log("✅ Friend request accepted:", friend?.fullName);
+      toast.success(`${friend?.fullName || "Someone"} accepted your friend request!`);
       
       // Refresh danh sách users trong chat store
       import("./useChatStore.js").then((module) => {
         module.useChatStore.getState().getUsers(true);
+      });
+      
+      // Refresh friend list
+      import("./useFriendStore.js").then((module) => {
+        module.useFriendStore.getState().getFriends();
+        module.useFriendStore.getState().getPendingRequests();
+      });
+    });
+    
+    socket.on("friend-list-updated", ({ friend, friendshipId }) => {
+      console.log("✅ Friend list updated:", friend?.fullName);
+      
+      // Refresh danh sách users trong chat store
+      import("./useChatStore.js").then((module) => {
+        module.useChatStore.getState().getUsers(true);
+      });
+      
+      // Refresh friend list
+      import("./useFriendStore.js").then((module) => {
+        module.useFriendStore.getState().getFriends();
       });
     });
 

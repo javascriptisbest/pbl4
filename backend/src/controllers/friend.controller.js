@@ -137,6 +137,14 @@ export const sendFriendRequest = async (req, res) => {
 
     // Populate để trả về thông tin user
     await friendship.populate("recipient", "fullName profilePic email");
+    await friendship.populate("requester", "fullName profilePic email");
+
+    // Emit socket event để notify recipient có friend request mới
+    const { emitToUser } = await import("../lib/websocketServer.js");
+    emitToUser(recipientId.toString(), "friend-request-received", {
+      from: friendship.requester,
+      requestId: friendship._id,
+    });
 
     res.status(201).json({
       message: "Friend request sent",
@@ -184,12 +192,19 @@ export const acceptFriendRequest = async (req, res) => {
     await friendship.populate("recipient", "fullName profilePic email");
 
     // Emit socket event để notify cả 2 users real-time
-    const { emitFriendAccepted } = await import("../lib/socket.js");
-    emitFriendAccepted(
-      friendship.requester._id.toString(),
-      friendship.recipient._id.toString(),
-      friendship
-    );
+    const { emitToUser } = await import("../lib/websocketServer.js");
+    
+    // Notify requester (người gửi request) rằng request đã được accept
+    emitToUser(friendship.requester._id.toString(), "friend-request-accepted", {
+      friend: friendship.recipient,
+      friendshipId: friendship._id,
+    });
+    
+    // Notify recipient (người chấp nhận) để refresh sidebar
+    emitToUser(friendship.recipient._id.toString(), "friend-list-updated", {
+      friend: friendship.requester,
+      friendshipId: friendship._id,
+    });
 
     res.status(200).json({
       message: "Friend request accepted",

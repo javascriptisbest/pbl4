@@ -24,6 +24,7 @@ const Sidebar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("contacts"); // "contacts", "groups", or "addFriends"
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [sendingRequestTo, setSendingRequestTo] = useState(null); // Track which user we're sending request to
 
   // Friend store
   const {
@@ -36,6 +37,15 @@ const Sidebar = () => {
     rejectFriendRequest,
     getPendingRequests,
   } = useFriendStore();
+
+  // Create a Set of pending sent user IDs for quick lookup
+  const pendingSentIds = useMemo(() => {
+    const ids = new Set();
+    if (pendingRequests?.sent) {
+      pendingRequests.sent.forEach(req => ids.add(req._id));
+    }
+    return ids;
+  }, [pendingRequests?.sent]);
 
   // Group store
   const { groups, selectedGroup, setSelectedGroup, getGroups } =
@@ -312,7 +322,7 @@ const Sidebar = () => {
                 </h3>
                 {pendingRequests.received.map((request) => (
                   <div
-                    key={request._id}
+                    key={request._id || request.requestId}
                     className="flex items-center justify-between p-2 rounded-lg mb-2"
                     style={{ backgroundColor: "var(--bg-accent)" }}
                   >
@@ -362,6 +372,53 @@ const Sidebar = () => {
                 ))}
               </div>
             )}
+            
+            {/* Pending Requests - Sent */}
+            {pendingRequests.sent && pendingRequests.sent.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-xs font-semibold mb-2 px-2" style={{ color: "var(--text-secondary)" }}>
+                  Sent Requests ({pendingRequests.sent.length})
+                </h3>
+                {pendingRequests.sent.map((request) => (
+                  <div
+                    key={request._id || request.requestId}
+                    className="flex items-center justify-between p-2 rounded-lg mb-2"
+                    style={{ backgroundColor: "var(--bg-accent)" }}
+                  >
+                    <div className="flex items-center space-x-3 flex-1">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
+                        style={{ backgroundColor: "var(--accent-secondary)" }}
+                      >
+                        {request.profilePic ? (
+                          <img
+                            src={request.profilePic}
+                            alt={request.fullName}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs">{request.fullName?.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
+                          {request.fullName}
+                        </p>
+                        <p className="text-xs truncate" style={{ color: "var(--text-secondary)" }}>
+                          Pending...
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className="px-2 py-1 rounded text-xs"
+                      style={{ backgroundColor: "var(--bg-secondary)", color: "var(--text-secondary)" }}
+                    >
+                      Waiting
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Search Results */}
             <div>
@@ -378,7 +435,11 @@ const Sidebar = () => {
                   <p className="text-gray-500 text-sm">No users found</p>
                 </div>
               ) : (
-                searchResults.map((user) => (
+                searchResults.map((user) => {
+                  const isPendingSent = pendingSentIds.has(user._id);
+                  const isSending = sendingRequestTo === user._id;
+                  
+                  return (
                   <div
                     key={user._id}
                     className="flex items-center justify-between p-2 rounded-lg mb-2 hover:bg-opacity-80 transition-colors"
@@ -409,18 +470,47 @@ const Sidebar = () => {
                       </div>
                     </div>
                     <button
-                      onClick={() => sendFriendRequest(user._id)}
+                      onClick={async () => {
+                        if (isPendingSent || isSending) return;
+                        setSendingRequestTo(user._id);
+                        try {
+                          await sendFriendRequest(user._id);
+                          // Refresh search results sau khi gửi request
+                          if (searchQuery.trim().length >= 2) {
+                            searchUsersToAdd(searchQuery);
+                          }
+                        } finally {
+                          setSendingRequestTo(null);
+                        }
+                      }}
+                      disabled={isPendingSent || isSending}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center space-x-1"
                       style={{
-                        backgroundColor: "var(--accent-primary)",
-                        color: "#ffffff",
+                        backgroundColor: isPendingSent ? "var(--bg-secondary)" : "var(--accent-primary)",
+                        color: isPendingSent ? "var(--text-secondary)" : "#ffffff",
+                        cursor: isPendingSent || isSending ? "not-allowed" : "pointer",
+                        opacity: isSending ? 0.7 : 1,
                       }}
                     >
-                      <UserPlus className="w-3 h-3" />
-                      <span>Add</span>
+                      {isSending ? (
+                        <>
+                          <span className="loading loading-spinner loading-xs"></span>
+                          <span>Sending...</span>
+                        </>
+                      ) : isPendingSent ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          <span>Pending</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-3 h-3" />
+                          <span>Add</span>
+                        </>
+                      )}
                     </button>
                   </div>
-                ))
+                )})
               )}
               {searchQuery.trim().length < 2 && (
                 <div className="p-8 text-center">
