@@ -71,11 +71,16 @@ export class VoiceCallManager {
      * Peer đã chấp nhận cuộc gọi và gửi answer (SDP) lại
      */
     this.socket.on("voice-call-answered", async ({ answer, answererId }) => {
+      console.log("📞 Call answered by:", answererId);
+      
       if (this.peerConnection) {
         // Set remote description = SDP answer từ peer
         await this.peerConnection.setRemoteDescription(
           new RTCSessionDescription(answer)
         );
+        console.log("✅ Remote description (answer) set successfully");
+      } else {
+        console.error("❌ No peer connection when receiving answer");
       }
 
       if (this.onCallAnswered) {
@@ -87,14 +92,18 @@ export class VoiceCallManager {
     this.socket.on(
       "voice-call-ice-candidate",
       async ({ candidate, senderId }) => {
+        console.log("🧊 Received ICE candidate from:", senderId);
         if (this.peerConnection && candidate) {
           try {
             await this.peerConnection.addIceCandidate(
               new RTCIceCandidate(candidate)
             );
+            console.log("✅ ICE candidate added successfully");
           } catch (error) {
-            console.error("Error adding ICE candidate:", error);
+            console.error("❌ Error adding ICE candidate:", error);
           }
+        } else if (!this.peerConnection) {
+          console.warn("⚠️ Received ICE candidate but no peer connection");
         }
       }
     );
@@ -165,11 +174,13 @@ export class VoiceCallManager {
       // Create offer
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
+      console.log("📤 Offer created and set as local description");
 
       this.socket.emit("voice-call-initiate", {
         targetUserId: targetUserId,
         offer: offer,
       });
+      console.log("📞 Call initiated to:", targetUserId);
 
       this.isCallActive = true;
 
@@ -236,18 +247,19 @@ export class VoiceCallManager {
       // Create answer
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
+      console.log("📤 Answer created and set as local description");
 
       // Send answer via Socket.IO
       this.socket.emit("voice-call-answer", {
         callerId: this.callerId,
         answer: answer,
       });
+      console.log("📤 Answer sent to caller:", this.callerId);
 
       this.isCallActive = true;
-
-      if (this.onCallConnected) {
-        this.onCallConnected();
-      }
+      
+      // Don't call onCallConnected here - wait for connection state to be "connected"
+      // onCallConnected will be triggered by onconnectionstatechange event
 
       return true;
     } catch (error) {
@@ -312,10 +324,13 @@ export class VoiceCallManager {
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         const targetUserId = this.isIncoming ? this.callerId : this.calleeId;
+        console.log("🧊 Sending ICE candidate to:", targetUserId);
         this.socket.emit("voice-call-ice-candidate", {
           targetUserId: targetUserId,
           candidate: event.candidate,
         });
+      } else {
+        console.log("✅ ICE gathering completed");
       }
     };
 
@@ -345,20 +360,30 @@ export class VoiceCallManager {
 
     // Connection state
     this.peerConnection.onconnectionstatechange = () => {
+      const state = this.peerConnection.connectionState;
+      console.log("🔄 WebRTC Connection state changed:", state);
 
-      if (this.peerConnection.connectionState === "connected") {
+      if (state === "connected") {
+        console.log("✅ WebRTC connection established!");
         if (this.onCallConnected) {
           this.onCallConnected();
         }
-      } else if (
-        this.peerConnection.connectionState === "disconnected" ||
-        this.peerConnection.connectionState === "failed"
-      ) {
+      } else if (state === "disconnected" || state === "failed") {
+        console.log("❌ WebRTC connection", state);
         this.endCall();
+      } else if (state === "connecting") {
+        console.log("🔄 WebRTC connecting...");
       }
     };
 
-    this.peerConnection.oniceconnectionstatechange = () => {};
+    this.peerConnection.oniceconnectionstatechange = () => {
+      const iceState = this.peerConnection.iceConnectionState;
+      console.log("🧊 ICE connection state:", iceState);
+      
+      if (iceState === "failed" || iceState === "closed") {
+        console.error("❌ ICE connection", iceState);
+      }
+    };
   }
 
   /**
