@@ -393,7 +393,10 @@ export const sendMessage = async (req, res) => {
       return res.status(400).json({ error: "Cannot send messages to yourself" });
     }
 
-    if (!text && !image && !video && !audio && !file) {
+    // Helper to check if a value is valid content (not a placeholder)
+    const isValidContent = (val) => val && val !== "pending" && !val.startsWith("uploading");
+    
+    if (!isValidContent(text) && !isValidContent(image) && !isValidContent(video) && !isValidContent(audio) && !isValidContent(file)) {
       return res.status(400).json({ error: "Message content is required" });
     }
 
@@ -420,10 +423,13 @@ export const sendMessage = async (req, res) => {
         console.log("✅ Video already uploaded to Cloudinary:", video.substring(0, 100));
         videoUrl = video;
         mediaType = "video";
-      } else if (video) {
+      } else if (video && video !== "pending" && !video.startsWith("uploading")) {
         console.log("📤 Uploading video as base64...");
         videoUrl = await uploadMedia(video, "video");
         mediaType = "video";
+      } else if (video) {
+        // Video is "pending" or invalid - skip
+        console.log("⚠️ Skipping invalid video value:", video);
       }
       
       if (image && (image.startsWith("http://") || image.startsWith("https://"))) {
@@ -451,10 +457,13 @@ export const sendMessage = async (req, res) => {
         console.log("✅ File already uploaded to Cloudinary:", file.substring(0, 100));
         fileUrl = file;
         mediaType = "file";
-      } else if (file) {
+      } else if (file && file !== "pending" && file !== "uploading...") {
         console.log("📤 Uploading file as base64...");
         fileUrl = await uploadMedia(file, "file");
         mediaType = "file";
+      } else if (file) {
+        // File is "pending" or invalid - skip
+        console.log("⚠️ Skipping invalid file value:", file);
       }
     } catch (uploadError) {
       console.error("❌ Upload error:", uploadError);

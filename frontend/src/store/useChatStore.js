@@ -420,6 +420,13 @@ export const useChatStore = create((set, get) => ({
         toast.dismiss("upload-progress");
       }
       
+      // Clean up placeholder values before sending
+      if (finalMessageData.video === "pending") delete finalMessageData.video;
+      if (finalMessageData.file === "pending") delete finalMessageData.file;
+      
+      // Debug: Log what's being sent to backend
+      console.log("📤 Sending message data to backend:", JSON.stringify(finalMessageData, null, 2));
+      
       // Use axiosFileInstance for video/file uploads (longer timeout - 10 minutes)
       const client = finalMessageData.video || finalMessageData.file 
         ? axiosFileInstance 
