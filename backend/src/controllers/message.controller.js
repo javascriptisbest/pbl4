@@ -365,6 +365,19 @@ export const sendMessage = async (req, res) => {
     const { id: receiverId } = req.params;
     const senderId = req.user?._id;
 
+    console.log("📨 Send message request:", {
+      senderId: senderId?.toString(),
+      receiverId,
+      hasText: !!text,
+      hasImage: !!image,
+      hasVideo: !!video,
+      hasAudio: !!audio,
+      hasFile: !!file,
+      fileName,
+      fileSize,
+      fileType,
+    });
+
     // Validate authentication
     if (!req.user || !senderId) {
       return res.status(401).json({ error: "Authentication required" });

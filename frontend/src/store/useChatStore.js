@@ -382,7 +382,13 @@ export const useChatStore = create((set, get) => ({
         }).then(response => {
           console.timeEnd("⏱️ Upload file to Cloudinary");
           console.log(`✅ File uploaded: ${response.data.fileUrl}`);
-          return { type: "file", url: response.data.fileUrl };
+          return { 
+            type: "file", 
+            url: response.data.fileUrl,
+            fileName: fileFile.name,
+            fileSize: fileFile.size,
+            fileType: fileFile.type,
+          };
         });
         
         uploadPromises.push(uploadPromise);
@@ -398,6 +404,16 @@ export const useChatStore = create((set, get) => ({
             finalMessageData.video = result.url;
           } else if (result.type === "file") {
             finalMessageData.file = result.url;
+            // Preserve file metadata if not already in messageData
+            if (!finalMessageData.fileName && result.fileName) {
+              finalMessageData.fileName = result.fileName;
+            }
+            if (!finalMessageData.fileSize && result.fileSize) {
+              finalMessageData.fileSize = result.fileSize;
+            }
+            if (!finalMessageData.fileType && result.fileType) {
+              finalMessageData.fileType = result.fileType;
+            }
           }
         });
         
@@ -446,6 +462,8 @@ export const useChatStore = create((set, get) => ({
     } catch (error) {
       console.timeEnd("⏱️ Send message total time");
       console.error("❌ Send message error:", error);
+      console.error("❌ Error response:", error.response?.data);
+      console.error("❌ Error status:", error.response?.status);
       
       // Dismiss loading toast if it exists
       toast.dismiss("upload-progress");
@@ -462,6 +480,14 @@ export const useChatStore = create((set, get) => ({
         errorMessage = error.response?.data?.error || "File size too large. Please use a smaller file.";
       } else if (error.response?.status === 408) {
         errorMessage = error.response?.data?.error || "Upload timeout. Please try again with a smaller file.";
+      } else if (error.response?.status === 500) {
+        // Log more details for 500 errors
+        console.error("❌ Server error details:", {
+          error: error.response?.data?.error,
+          message: error.response?.data?.message,
+          timestamp: error.response?.data?.timestamp,
+        });
+        errorMessage = error.response?.data?.error || error.response?.data?.message || "Server error. Please try again.";
       }
       
       toast.error(errorMessage);
