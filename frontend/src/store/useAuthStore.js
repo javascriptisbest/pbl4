@@ -57,19 +57,20 @@ export const useAuthStore = create((set, get) => ({
 
   signup: async (data) => {
     set({ isSigningUp: true });
+    // Xóa token cũ trước khi đăng ký
+    localStorage.removeItem('jwt_token');
+    set({ authUser: null });
     try {
       const res = await axiosInstance.post("/auth/signup", data);
-      
       // Lưu token vào localStorage cho cross-origin auth
       if (res.data.token) {
         localStorage.setItem('jwt_token', res.data.token);
       }
-      
       set({ authUser: res.data });
       toast.success("Account created successfully");
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || error.message);
     } finally {
       set({ isSigningUp: false });
     }
