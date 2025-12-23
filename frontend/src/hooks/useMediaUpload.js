@@ -158,7 +158,8 @@ export const useMediaUpload = () => {
       setFileFile(file);
       setFileMetadata({
         name: file.name,
-        size: (file.size / 1024).toFixed(2) + " KB",
+        size: file.size, // Raw bytes - backend expects Number
+        sizeFormatted: (file.size / 1024).toFixed(2) + " KB", // For display only
         type: file.type,
       });
       

@@ -47,7 +47,7 @@ const MediaPreview = ({ type, preview, onRemove, metadata }) => {
       {type === "file" && (
         <div className="bg-base-200 rounded-lg p-3 max-w-xs">
           <p className="text-sm font-medium truncate">{metadata?.name}</p>
-          <p className="text-xs text-base-content/60">{metadata?.size}</p>
+          <p className="text-xs text-base-content/60">{metadata?.sizeFormatted || metadata?.size}</p>
         </div>
       )}
 
